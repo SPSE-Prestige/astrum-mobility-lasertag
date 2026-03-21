@@ -122,11 +122,43 @@ export default function Home() {
   }
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(0,255,0,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,0,0,0.12),transparent_30%),#020303] p-4 md:p-8">
+      <div className="mx-auto mb-4 flex w-full max-w-350 items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 md:hidden">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setLanguage("cs")}
+            className={`rounded-md border px-2 py-1 text-xs ${
+              language === "cs" ? "border-[#00ff00] text-[#00ff00]" : "border-zinc-700 text-zinc-400"
+            }`}
+          >
+            CZ
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage("en")}
+            className={`rounded-md border px-2 py-1 text-xs ${
+              language === "en" ? "border-[#00ff00] text-[#00ff00]" : "border-zinc-700 text-zinc-400"
+            }`}
+          >
+            EN
+          </button>
+        </div>
+        <span className="text-xs uppercase tracking-[0.16em] text-zinc-400">{auth.username}</span>
+        <button
+          type="button"
+          onClick={logout}
+          className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-200 transition hover:border-zinc-500"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          {language === "cs" ? "Odhlásit" : "Logout"}
+        </button>
+      </div>
+
       <div className="mx-auto grid w-full max-w-350 gap-4 md:grid-cols-[288px_1fr]">
         <PhaseSidebar phase={state.phase} language={language} raceStatus={state.raceStatus} onPhaseChange={updatePhase} />
 
         <main className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 md:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/30 px-3 py-2">
+          <div className="mb-4 hidden items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 md:flex">
             <div className="flex gap-2">
               <button
                 type="button"
