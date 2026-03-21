@@ -16,16 +16,16 @@ import (
 	_ "github.com/SPSE-Prestige/aimtec2026-lasertag/backend/docs"
 )
 
-//	@title			Laser Tag API
-//	@version		1.0
-//	@description	REST API for the Aimtec 2026 Laser Tag system — manages games, devices, players, teams and real-time events.
-//	@host			localhost:8080
-//	@BasePath		/api
+// @title			Laser Tag API
+// @version		1.0
+// @description	REST API for the Aimtec 2026 Laser Tag system — manages games, devices, players, teams and real-time events.
+// @host			localhost:8080
+// @BasePath		/api
 //
-//	@securityDefinitions.apikey	BearerAuth
-//	@in							header
-//	@name						Authorization
-//	@description				Enter "Bearer {token}" (without quotes).
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description				Enter "Bearer {token}" (without quotes).
 func main() {
 	cfg := config.Load()
 
