@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --background: #020303;
+  --foreground: #ebedef;
+  --neon-green: #00ff00;
+  --alert-red: #ff0000;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-rajdhani);
+  --font-display: var(--font-orbitron);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-rajdhani), sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-orbitron), sans-serif;
+}
