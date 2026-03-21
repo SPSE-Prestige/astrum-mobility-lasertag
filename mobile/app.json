@@ -1,35 +1,23 @@
 {
   "expo": {
-    "name": "LaserTag Mobile",
+    "name": "lasertag-mobile",
     "slug": "lasertag-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#020303"
-    },
+    "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTabletMode": true,
-      "bundleIdentifier": "com.spse.lasertag"
+      "supportsTabletMode": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#020303"
-      },
-      "package": "com.spse.lasertag"
+        "backgroundColor": "#ffffff"
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-router"
-    ]
+      "favicon": "./favicon.png"
+    }
   }
 }
