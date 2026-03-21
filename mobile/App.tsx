@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform, TextInput, Alert, KeyboardAvoidingView } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Goldman_400Regular, Goldman_700Bold } from '@expo-google-fonts/goldman';
 
@@ -13,9 +13,16 @@ const GAME_INFO = {
   date: '21.03.2026',
 };
 
-const MOCK_CURRENT_USER = {
+// Mock database mapping codes to users
+const MOCK_USERS_DB: Record<string, { id: string, name: string }> = {
+  '1234': { id: 'u1', name: 'Player One' },
+  '0007': { id: 'u2', name: 'Terminator' },
+  '1111': { id: 'u3', name: 'Sniper_CZ' },
+};
+
+const MOCK_CURRENT_USER_TEMPLATE = {
   id: 'u1',
-  name: 'Player One',
+                  // Name will be filled from login
   rank: 2,
   kills: 12,        // Kolikrát sestřelil
   deaths: 8,        // Kolikrát byl sestřelen
@@ -63,17 +70,82 @@ export default function App() {
     Goldman_700Bold,
   });
 
-  const accuracy = calculateAccuracy(MOCK_CURRENT_USER.hits, MOCK_CURRENT_USER.shotsFired);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginCode, setLoginCode] = useState('');
+  const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER_TEMPLATE);
+
+  const handleLogin = () => {
+    if (MOCK_USERS_DB[loginCode]) {
+      setCurrentUser({
+        ...MOCK_CURRENT_USER_TEMPLATE,
+        name: MOCK_USERS_DB[loginCode].name,
+        id: MOCK_USERS_DB[loginCode].id
+      });
+      setIsLoggedIn(true);
+    } else {
+      Alert.alert('Chyba', 'Neplatný přihlašovací kód');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setLoginCode('');
+  };
+
+  const accuracy = calculateAccuracy(currentUser.hits, currentUser.shotsFired);
 
   if (!fontsLoaded) {
     return <View style={styles.loadingContainer}><Text style={{color: 'white'}}>Loading...</Text></View>;
   }
 
+  // --- LOGIN SCREEN ---
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" backgroundColor={COLORS.background} />
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.loginContainer}
+        >
+          <Text style={styles.loginLogo}>LASER TAG</Text>
+          <Text style={styles.loginSubtitle}>PŘIHLÁŠENÍ HRÁČE</Text>
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>ZADEJTE VÁŠ PŘIDĚLENÝ KÓD</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0000"
+              placeholderTextColor={COLORS.textSecondary}
+              keyboardType="numeric"
+              maxLength={4}
+              value={loginCode}
+              onChangeText={setLoginCode}
+              secureTextEntry
+            />
+          </View>
+
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <Text style={styles.actionButtonText}>VSTOUPIT DO ARÉNY</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.loginFooter}>Kód vám přidělí administrátor při registraci</Text>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // --- GAME STATS SCREEN ---
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" backgroundColor={COLORS.background} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
+        <View style={styles.topBar}>
+           <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+             <Text style={styles.logoutText}>ODHLÁSIT</Text>
+           </TouchableOpacity>
+        </View>
+
         {/* HEADER - GAME INFO */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>VÝSLEDKY HRY</Text>
@@ -88,9 +160,9 @@ export default function App() {
         {/* PLAYER CARD (Nickname) */}
          <View style={styles.playerCard}>
           <Text style={styles.playerLabel}>HRÁČ</Text>
-          <Text style={styles.playerName}>{MOCK_CURRENT_USER.name}</Text>
+          <Text style={styles.playerName}>{currentUser.name}</Text>
           <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>#{MOCK_CURRENT_USER.rank} MÍSTO</Text>
+            <Text style={styles.rankText}>#{currentUser.rank} MÍSTO</Text>
           </View>
         </View>
 
@@ -99,14 +171,14 @@ export default function App() {
           {/* Kills - "Kolik sestřelil" */}
           <View style={styles.gridItem}>
             <Text style={styles.gridLabel}>SESTŘEILY</Text>
-            <Text style={[styles.gridValue, { color: COLORS.accentGreen }]}>{MOCK_CURRENT_USER.kills}</Text>
+            <Text style={[styles.gridValue, { color: COLORS.accentGreen }]}>{currentUser.kills}</Text>
             <Text style={styles.gridSubtext}>Zadané zásahy</Text>
           </View>
 
           {/* Deaths - "Kolikrát byl sestřelen" */}
            <View style={styles.gridItem}>
             <Text style={styles.gridLabel}>BYL SESTŘELEN</Text>
-            <Text style={[styles.gridValue, { color: COLORS.accentRed }]}>{MOCK_CURRENT_USER.deaths}x</Text>
+            <Text style={[styles.gridValue, { color: COLORS.accentRed }]}>{currentUser.deaths}x</Text>
             <Text style={styles.gridSubtext}>Smrti</Text>
           </View>
           
@@ -114,13 +186,13 @@ export default function App() {
           <View style={styles.gridItem}>
             <Text style={styles.gridLabel}>PŘESNOST</Text>
             <Text style={styles.gridValue}>{accuracy}%</Text>
-            <Text style={styles.gridSubtext}>{MOCK_CURRENT_USER.hits} tref / {MOCK_CURRENT_USER.shotsFired} střel</Text>
+            <Text style={styles.gridSubtext}>{currentUser.hits} tref / {currentUser.shotsFired} střel</Text>
           </View>
 
           {/* Favorite Weapon - "Oblíbená zbraň" */}
           <View style={styles.gridItem}>
             <Text style={styles.gridLabel}>ZBRAŇ</Text>
-            <Text style={[styles.gridValue, { fontSize: 20 }]} numberOfLines={1}>{MOCK_CURRENT_USER.favoriteWeapon}</Text>
+            <Text style={[styles.gridValue, { fontSize: 20 }]} numberOfLines={1}>{currentUser.favoriteWeapon}</Text>
             <Text style={styles.gridSubtext}>Nejpoužívanější</Text>
           </View>
         </View>
@@ -144,7 +216,7 @@ export default function App() {
                 index !== MOCK_LEADERBOARD.length - 1 && styles.leaderboardRowBorder
               ]}>
                 <Text style={[styles.leaderboardCell, { flex: 1, textAlign: 'center', color: item.rank === 1 ? COLORS.accentGreen : COLORS.textSecondary }]}>{item.rank}</Text>
-                <Text style={[styles.leaderboardCell, { flex: 4, color: item.id === MOCK_CURRENT_USER.id ? COLORS.textPrimary : COLORS.textSecondary, fontFamily: item.id === MOCK_CURRENT_USER.id ? 'Goldman_700Bold' : 'Goldman_400Regular' }]}>{item.name}</Text>
+                <Text style={[styles.leaderboardCell, { flex: 4, color: item.id === currentUser.id ? COLORS.textPrimary : COLORS.textSecondary, fontFamily: item.id === currentUser.id ? 'Goldman_700Bold' : 'Goldman_400Regular' }]}>{item.name}</Text>
                 <Text style={[styles.leaderboardCell, { flex: 2, textAlign: 'center', color: COLORS.accentGreen }]}>{item.kills}</Text>
                 <Text style={[styles.leaderboardCell, { flex: 2, textAlign: 'center', color: COLORS.accentRed }]}>{item.deaths}</Text>
               </View>
@@ -181,7 +253,7 @@ export default function App() {
         </View>
 
         {/* ACTION BUTTON */}
-        <TouchableOpacity style={styles.actionButton} onPress={() => alert('Startuji novou hru...')}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Hledání hry', 'Připojování k serveru...')}>
           <Text style={styles.actionButtonText}>OPAKOVAT</Text>
         </TouchableOpacity>
 
@@ -440,5 +512,84 @@ const styles = StyleSheet.create({
     fontFamily: 'Goldman_700Bold',
     letterSpacing: 2,
     textTransform: 'uppercase',
+  },
+
+  // Login Screen Styles
+  loginContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loginLogo: {
+    fontSize: 48,
+    fontFamily: 'Goldman_700Bold',
+    color: COLORS.accentGreen,
+    marginBottom: 10,
+    textAlign: 'center',
+    textShadowColor: COLORS.accentGreen,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  loginSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Goldman_400Regular',
+    color: COLORS.textPrimary,
+    marginBottom: 50,
+    letterSpacing: 2,
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  inputLabel: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Goldman_700Bold',
+    fontSize: 12,
+    marginBottom: 10,
+    letterSpacing: 1,
+  },
+  input: {
+    backgroundColor: COLORS.cardBackground,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    padding: 15,
+    color: COLORS.textPrimary,
+    fontFamily: 'Goldman_700Bold',
+    fontSize: 24,
+    textAlign: 'center',
+    letterSpacing: 5,
+  },
+  loginButton: {
+    backgroundColor: COLORS.accentGreen,
+    width: '100%',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  loginFooter: {
+    color: COLORS.textSecondary,
+    fontSize: 10,
+    fontFamily: 'Goldman_400Regular',
+    textAlign: 'center',
+    opacity: 0.5,
+  },
+
+  // Top Bar & Navigation
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  logoutText: {
+    color: COLORS.accentRed,
+    fontFamily: 'Goldman_700Bold',
+    fontSize: 12,
   },
 });
