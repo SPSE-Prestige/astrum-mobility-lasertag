@@ -1,7 +1,11 @@
 .PHONY: help dev prod up down restart build \
        db-migrate db-seed db-reset db-fresh db-studio \
-       logs logs-postgres logs-redis \
+       logs logs-postgres logs-redis logs-backend logs-web \
        ps push clean
+
+COMPOSE_BASE  = docker compose -f docker/docker-compose.yml
+COMPOSE_DEV   = $(COMPOSE_BASE) -f docker/docker-compose.dev.yml
+COMPOSE_PROD  = $(COMPOSE_BASE) -f docker/docker-compose.prod.yml
 
 # ──────────────────────────────────────────────
 #  Výchozí cíl
@@ -12,46 +16,64 @@ help: ## Zobrazí nápovědu
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 # ──────────────────────────────────────────────
-#  Dev / Prod
+#  Development
 # ──────────────────────────────────────────────
 
-dev: ## Spustí infra v dev módu (build + logs v popředí)
-	docker compose up --build
+dev: ## Spustí DEV prostředí (build + logs v popředí)
+	$(COMPOSE_DEV) up --build
 
-prod: ## Spustí infra v prod módu (build + detached)
-	docker compose up --build -d
+dev-d: ## Spustí DEV prostředí na pozadí
+	$(COMPOSE_DEV) up --build -d
 
-up: ## Spustí služby (bez rebuildu)
-	docker compose up -d
+dev-down: ## Zastaví DEV prostředí
+	$(COMPOSE_DEV) down
 
-down: ## Zastaví a odstraní kontejnery
-	docker compose down
+# ──────────────────────────────────────────────
+#  Production
+# ──────────────────────────────────────────────
 
-restart: down up ## Restart služeb
+prod: ## Spustí PROD prostředí (build + detached)
+	$(COMPOSE_PROD) up --build -d
 
-build: ## Sestaví všechny image
-	docker compose build
+prod-down: ## Zastaví PROD prostředí
+	$(COMPOSE_PROD) down
+
+prod-restart: prod-down prod ## Restart PROD služeb
+
+# ──────────────────────────────────────────────
+#  Obecné
+# ──────────────────────────────────────────────
+
+up: dev-d ## Alias pro dev-d
+
+down: ## Zastaví kontejnery (dev)
+	$(COMPOSE_DEV) down
+
+restart: down up ## Restart služeb (dev)
+
+build: ## Sestaví všechny image (dev)
+	$(COMPOSE_DEV) build
 
 # ──────────────────────────────────────────────
 #  Databáze
 # ──────────────────────────────────────────────
 
 db-migrate: ## Spustí migrace (prisma migrate deploy)
-	docker compose run --rm prisma-migrate
+	$(COMPOSE_DEV) run --rm prisma-migrate
 
 db-seed: ## Spustí seedování databáze
-	docker compose run --rm prisma-seed
+	$(COMPOSE_DEV) run --rm prisma-seed
 
 db-reset: ## Smaže volume a spustí vše od nuly (migrate + seed)
-	docker compose down -v
-	docker compose up --build
+	$(COMPOSE_DEV) down -v
+	$(COMPOSE_DEV) up --build
 
 db-fresh: ## Smaže volume, spustí v detach módu (migrate + seed)
-	docker compose down -v
-	docker compose up --build -d
+	$(COMPOSE_DEV) down -v
+	$(COMPOSE_DEV) up --build -d
 
 db-studio: ## Otevře Prisma Studio (GUI pro databázi)
-	docker compose run --rm -p 5555:5555 prisma-migrate \
+	$(COMPOSE_DEV) run --rm -p 5555:5555 prisma-migrate \
 		sh -c "npx prisma studio --port 5555 --browser none"
 
 # ──────────────────────────────────────────────
@@ -65,21 +87,28 @@ push: ## Git add + commit + push (použij: make push m="zpráva")
 #  Logy
 # ──────────────────────────────────────────────
 
-logs: ## Zobrazí logy všech služeb
-	docker compose logs -f
+logs: ## Zobrazí logy všech služeb (dev)
+	$(COMPOSE_DEV) logs -f
 
 logs-postgres: ## Logy PostgreSQL
-	docker compose logs -f postgres
+	$(COMPOSE_DEV) logs -f postgres
 
 logs-redis: ## Logy Redis
-	docker compose logs -f redis
+	$(COMPOSE_DEV) logs -f redis
+
+logs-backend: ## Logy Go backend
+	$(COMPOSE_DEV) logs -f backend
+
+logs-web: ## Logy Next.js web
+	$(COMPOSE_DEV) logs -f web
 
 # ──────────────────────────────────────────────
 #  Stav a úklid
 # ──────────────────────────────────────────────
 
 ps: ## Zobrazí stav běžících služeb
-	docker compose ps -a
+	$(COMPOSE_DEV) ps -a
 
 clean: ## Zastaví vše, smaže volumes, images a sítě
-	docker compose down -v --rmi local --remove-orphans
+	$(COMPOSE_DEV) down -v --rmi local --remove-orphans
+	$(COMPOSE_PROD) down -v --rmi local --remove-orphans

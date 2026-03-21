@@ -2,12 +2,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY prisma/package.json ./package.json
-COPY prisma/tsconfig.json ./tsconfig.json
+COPY infra/prisma/package.json ./package.json
+COPY infra/prisma/tsconfig.json ./tsconfig.json
 RUN npm install
 
-COPY prisma/schema.prisma ./prisma/schema.prisma
-COPY prisma/seed.ts ./prisma/seed.ts
+COPY infra/prisma/schema.prisma ./prisma/schema.prisma
+COPY infra/prisma/seed.ts ./prisma/seed.ts
 RUN npx prisma generate
 
 CMD ["npx", "prisma", "db", "seed"]

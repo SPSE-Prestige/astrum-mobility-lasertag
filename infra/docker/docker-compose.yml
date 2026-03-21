@@ -1,9 +1,13 @@
+## ─────────────────────────────────────────────
+##  Laser Tag — Base Compose (shared services)
+## ─────────────────────────────────────────────
+name: aimtec2026-lasertag
+
 services:
+  # ── Data stores ──
   postgres:
     image: postgres:16-alpine
-    env_file: ../.env
-    ports:
-      - "5432:5432"
+    env_file: ../../.env
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -16,8 +20,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -28,11 +30,12 @@ services:
     networks:
       - lasertag
 
+  # ── Migrations & Seed ──
   prisma-migrate:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.migrate
-    env_file: ../.env
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.migrate
+    env_file: ../../.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,12 +44,32 @@ services:
 
   prisma-seed:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.seed
-    env_file: ../.env
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.seed
+    env_file: ../../.env
     depends_on:
       prisma-migrate:
         condition: service_completed_successfully
+    networks:
+      - lasertag
+
+  # ── Backend API ──
+  backend:
+    env_file: ../../.env
+    depends_on:
+      prisma-seed:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - lasertag
+
+  # ── Web Dashboard ──
+  web:
+    env_file: ../../.env
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - lasertag
 
