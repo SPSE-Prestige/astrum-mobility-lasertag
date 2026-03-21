@@ -3,124 +3,86 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 	"sync"
 
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 	"github.com/gorilla/websocket"
 )
 
-// Hub manages WebSocket connections per game.
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // allow all origins in dev; restrict in production via nginx
+	},
+}
+
+// Hub manages WebSocket connections and broadcasts messages.
 type Hub struct {
-	mu       sync.RWMutex
-	games    map[string]map[*Client]struct{}
-	eventBus domain.EventBus
+	mu      sync.RWMutex
+	clients map[*websocket.Conn]struct{}
 }
 
-func NewHub(eventBus domain.EventBus) *Hub {
+func NewHub() *Hub {
 	return &Hub{
-		games:    make(map[string]map[*Client]struct{}),
-		eventBus: eventBus,
+		clients: make(map[*websocket.Conn]struct{}),
 	}
 }
 
-func (h *Hub) Register(gameID string, client *Client) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.games[gameID] == nil {
-		h.games[gameID] = make(map[*Client]struct{})
+// HandleWS upgrades the HTTP connection to WebSocket and registers the client.
+func (h *Hub) HandleWS(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[WS] upgrade error: %v", err)
+		return
 	}
-	h.games[gameID][client] = struct{}{}
-}
 
-func (h *Hub) Unregister(gameID string, client *Client) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	if clients, ok := h.games[gameID]; ok {
-		delete(clients, client)
-		if len(clients) == 0 {
-			delete(h.games, gameID)
+	h.clients[conn] = struct{}{}
+	h.mu.Unlock()
+
+	log.Printf("[WS] client connected (%d total)", h.Count())
+
+	// Read loop — just to detect disconnect
+	go func() {
+		defer func() {
+			h.mu.Lock()
+			delete(h.clients, conn)
+			h.mu.Unlock()
+			conn.Close()
+			log.Printf("[WS] client disconnected (%d total)", h.Count())
+		}()
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				break
+			}
 		}
-	}
+	}()
 }
 
-func (h *Hub) Broadcast(gameID string, msg domain.WSMessage) {
-	h.mu.RLock()
-	clients := h.games[gameID]
-	h.mu.RUnlock()
-
+// Broadcast sends a message to all connected WebSocket clients.
+func (h *Hub) Broadcast(msg any) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return
 	}
 
-	for c := range clients {
-		select {
-		case c.send <- data:
-		default:
-			go func(client *Client) {
-				h.Unregister(gameID, client)
-				client.conn.Close()
-			}(c)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for conn := range h.clients {
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			conn.Close()
+			go func(c *websocket.Conn) {
+				h.mu.Lock()
+				delete(h.clients, c)
+				h.mu.Unlock()
+			}(conn)
 		}
 	}
 }
 
-// Run subscribes to the event bus and broadcasts messages to connected clients.
-func (h *Hub) Run() {
-	// This is started per-game when clients connect.
-	// The per-game subscription is managed in the Handler.
-}
-
-// StartGameBroadcaster subscribes to a game's event bus channel and broadcasts to WS clients.
-func (h *Hub) StartGameBroadcaster(gameID string) {
-	ch := h.eventBus.Subscribe(gameID)
-	go func() {
-		for msg := range ch {
-			h.Broadcast(gameID, msg)
-		}
-	}()
-}
-
-// Client represents a single WebSocket connection.
-type Client struct {
-	conn   *websocket.Conn
-	send   chan []byte
-	gameID string
-	hub    *Hub
-}
-
-func NewClient(conn *websocket.Conn, gameID string, hub *Hub) *Client {
-	return &Client{
-		conn:   conn,
-		send:   make(chan []byte, 256),
-		gameID: gameID,
-		hub:    hub,
-	}
-}
-
-func (c *Client) WritePump() {
-	defer c.conn.Close()
-	for msg := range c.send {
-		if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			return
-		}
-	}
-}
-
-func (c *Client) ReadPump() {
-	defer func() {
-		c.hub.Unregister(c.gameID, c)
-		c.conn.Close()
-		close(c.send)
-	}()
-	for {
-		_, _, err := c.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("ws read error: %v", err)
-			}
-			return
-		}
-		// Client messages are not processed; this is a broadcast-only channel.
-	}
+// Count returns the number of active connections.
+func (h *Hub) Count() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.clients)
 }

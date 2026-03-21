@@ -1,17 +1,16 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Real-time configurable laser tag game engine backend.",
-        "title": "Laser Tag Game API",
+        "description": "REST API for the Aimtec 2026 Laser Tag system — manages games, devices, players, teams and real-time events.",
+        "title": "Laser Tag API",
         "contact": {},
         "version": "1.0"
     },
     "host": "localhost:8080",
-    "basePath": "/",
+    "basePath": "/api",
     "paths": {
-        "/api/admin/login": {
+        "/auth/login": {
             "post": {
-                "description": "Authenticate an admin user and receive a bearer token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -19,7 +18,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Admin"
+                    "auth"
                 ],
                 "summary": "Admin login",
                 "parameters": [
@@ -29,7 +28,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/http.LoginRequest"
+                            "$ref": "#/definitions/internal_delivery_http.LoginRequest"
                         }
                     }
                 ],
@@ -37,111 +36,160 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.TokenResponse"
+                            "$ref": "#/definitions/internal_delivery_http.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/events/hit": {
+        "/auth/logout": {
             "post": {
-                "description": "Process a hit event sent from a physical laser tag device.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
                 "tags": [
-                    "Devices"
+                    "auth"
                 ],
-                "summary": "Register a hit",
-                "parameters": [
-                    {
-                        "description": "Hit event",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/http.HitRequest"
-                        }
-                    }
-                ],
+                "summary": "Logout (invalidate token)",
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.StatusResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/games": {
+        "/devices": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get a list of all games.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Games"
+                    "devices"
                 ],
-                "summary": "List games",
+                "summary": "List all devices",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/http.GameResponse"
+                                "$ref": "#/definitions/internal_delivery_http.DeviceResponse"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/available": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "List available (online) devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_delivery_http.DeviceResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "List all games",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_delivery_http.GameResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
@@ -152,7 +200,6 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new laser tag game with the given configuration.",
                 "consumes": [
                     "application/json"
                 ],
@@ -160,17 +207,17 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Games"
+                    "games"
                 ],
-                "summary": "Create a game",
+                "summary": "Create a new game",
                 "parameters": [
                     {
-                        "description": "Game definition",
+                        "description": "Game settings (optional)",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/http.CreateGameRequest"
+                            "$ref": "#/definitions/internal_delivery_http.CreateGameRequest"
                         }
                     }
                 ],
@@ -178,33 +225,44 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/http.GameResponse"
+                            "$ref": "#/definitions/internal_delivery_http.GameResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/games/{id}": {
+        "/games/{id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve a game by its ID.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Games"
+                    "games"
                 ],
-                "summary": "Get a game",
+                "summary": "Get game by ID",
                 "parameters": [
                     {
                         "type": "string",
@@ -218,85 +276,38 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.GameResponse"
+                            "$ref": "#/definitions/internal_delivery_http.GameResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/games/{id}/control": {
+        "/games/{id}/end": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Execute an admin action (revive, kick, change_team, restart, etc.).",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Games"
+                    "games"
                 ],
-                "summary": "Admin control",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Game ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Control command",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/http.ControlCommandRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.StatusResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/games/{id}/end": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "End a running or paused game and persist final state.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Games"
-                ],
-                "summary": "End a game",
+                "summary": "End a game (running → finished)",
                 "parameters": [
                     {
                         "type": "string",
@@ -310,21 +321,224 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.StatusResponse"
+                            "$ref": "#/definitions/internal_delivery_http.GameResponse"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/games/{id}/join": {
+        "/games/{id}/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Get game events (kills, respawns, etc.)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_delivery_http.EventResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/full": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Get full game state (game + teams + players + events)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.GameFullResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/leaderboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Get game leaderboard (players sorted by score)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_delivery_http.PlayerResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/players": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "players"
+                ],
+                "summary": "List players in a game",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_delivery_http.PlayerResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
-                "description": "Register a player (with device and gun) into an existing game.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -332,9 +546,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Players"
+                    "players"
                 ],
-                "summary": "Join a game",
+                "summary": "Add a player (device) to a game",
                 "parameters": [
                     {
                         "type": "string",
@@ -349,7 +563,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/http.JoinRequest"
+                            "$ref": "#/definitions/internal_delivery_http.AddPlayerRequest"
                         }
                     }
                 ],
@@ -357,71 +571,47 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/http.GamePlayerResponse"
+                            "$ref": "#/definitions/internal_delivery_http.PlayerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
-                    }
-                }
-            }
-        },
-        "/api/games/{id}/leaderboard": {
-            "get": {
-                "description": "Retrieve sorted leaderboard entries for a game.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Players"
-                ],
-                "summary": "Get leaderboard",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Game ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/http.LeaderboardEntryResponse"
-                            }
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Game full or device already in game",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/games/{id}/pause": {
-            "post": {
+        "/games/{id}/players/{playerId}": {
+            "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Pause a currently running game.",
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
-                    "Games"
+                    "players"
                 ],
-                "summary": "Pause a game",
+                "summary": "Remove a player from a game",
                 "parameters": [
                     {
                         "type": "string",
@@ -429,150 +619,41 @@
                         "name": "id",
                         "in": "path",
                         "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.StatusResponse"
-                        }
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/games/{id}/players": {
-            "get": {
-                "description": "Get all players currently registered in a game.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Players"
-                ],
-                "summary": "List players",
-                "parameters": [
                     {
                         "type": "string",
-                        "description": "Game ID",
-                        "name": "id",
+                        "description": "Player ID",
+                        "name": "playerId",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/http.GamePlayerResponse"
-                            }
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/api/games/{id}/start": {
-            "post": {
+        "/games/{id}/players/{playerId}/team": {
+            "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Transition a game from pending to running.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Games"
-                ],
-                "summary": "Start a game",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Game ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.StatusResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/games/{id}/state": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve the live state of a game from cache (players, scores, timer).",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Games"
-                ],
-                "summary": "Get game state",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Game ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.GameLiveStateResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/games/{id}/teams": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Add a new team to an existing game.",
                 "consumes": [
                     "application/json"
                 ],
@@ -580,9 +661,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Games"
+                    "players"
                 ],
-                "summary": "Create a team",
+                "summary": "Change a player's team assignment",
                 "parameters": [
                     {
                         "type": "string",
@@ -592,12 +673,251 @@
                         "required": true
                     },
                     {
-                        "description": "Team definition",
+                        "type": "string",
+                        "description": "Player ID",
+                        "name": "playerId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New team",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/http.TeamRequest"
+                            "$ref": "#/definitions/internal_delivery_http.UpdatePlayerTeamRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/settings": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Update game settings (lobby only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.UpdateSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.GameResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Start a game (lobby → running)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.GameResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/teams": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "List teams in a game",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_delivery_http.TeamResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Add a team to a game",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Team data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.AddTeamRequest"
                         }
                     }
                 ],
@@ -605,13 +925,71 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/http.TeamResponse"
+                            "$ref": "#/definitions/internal_delivery_http.TeamResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/http.ErrorResponse"
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/teams/{teamId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Remove a team",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http.ErrorResponse"
                         }
                     }
                 }
@@ -619,182 +997,116 @@
         }
     },
     "definitions": {
-        "http.ControlCommandRequest": {
+        "internal_delivery_http.AddPlayerRequest": {
             "type": "object",
             "properties": {
-                "action": {
-                    "type": "string",
-                    "example": "revive_player"
-                },
-                "game_id": {
-                    "type": "string"
-                },
-                "params": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "player_id": {
-                    "type": "string",
-                    "example": "player-uuid"
-                }
-            }
-        },
-        "http.CreateGameRequest": {
-            "type": "object",
-            "properties": {
-                "config": {
-                    "$ref": "#/definitions/http.GameConfig"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Friday Night Match"
-                }
-            }
-        },
-        "http.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "something went wrong"
-                }
-            }
-        },
-        "http.FeedbackConfig": {
-            "type": "object",
-            "properties": {
-                "intensity": {
-                    "type": "integer",
-                    "example": 80
-                },
-                "led_enabled": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "sound_enabled": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "vibration_enabled": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
-        "http.GameConfig": {
-            "type": "object",
-            "properties": {
-                "duration_seconds": {
-                    "type": "integer",
-                    "example": 300
-                },
-                "feedback": {
-                    "$ref": "#/definitions/http.FeedbackConfig"
-                },
-                "game_mode": {
-                    "type": "string",
-                    "example": "team_deathmatch"
-                },
-                "max_players": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "player": {
-                    "$ref": "#/definitions/http.PlayerConfig"
-                },
-                "scoring": {
-                    "$ref": "#/definitions/http.ScoringConfig"
-                },
-                "team_count": {
-                    "type": "integer",
-                    "example": 2
-                }
-            }
-        },
-        "http.GameLiveStateResponse": {
-            "type": "object",
-            "properties": {
-                "game_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "running"
-                },
-                "team_scores": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
-                "time_remaining_s": {
-                    "type": "integer",
-                    "example": 180
-                }
-            }
-        },
-        "http.GamePlayerResponse": {
-            "type": "object",
-            "properties": {
-                "deaths": {
-                    "type": "integer",
-                    "example": 0
-                },
                 "device_id": {
-                    "type": "string",
-                    "example": "vest-01"
-                },
-                "game_id": {
                     "type": "string"
-                },
-                "gun_id": {
-                    "type": "string",
-                    "example": "gun-01"
-                },
-                "hp": {
-                    "type": "integer",
-                    "example": 100
-                },
-                "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "is_alive": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "kills": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "lives_remaining": {
-                    "type": "integer",
-                    "example": 3
                 },
                 "nickname": {
-                    "type": "string",
-                    "example": "Player1"
-                },
-                "score": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "string"
                 },
                 "team_id": {
                     "type": "string"
-                },
-                "user_id": {
+                }
+            }
+        },
+        "internal_delivery_http.AddTeamRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
                     "type": "string"
                 },
-                "weapon_id": {
+                "name": {
                     "type": "string"
                 }
             }
         },
-        "http.GameResponse": {
+        "internal_delivery_http.CreateGameRequest": {
             "type": "object",
             "properties": {
-                "config": {
-                    "$ref": "#/definitions/http.GameConfig"
+                "settings": {
+                    "$ref": "#/definitions/internal_delivery_http.GameSettingsDTO"
+                }
+            }
+        },
+        "internal_delivery_http.DeviceResponse": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_seen": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_delivery_http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_delivery_http.EventResponse": {
+            "type": "object",
+            "properties": {
+                "game_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "payload": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_delivery_http.GameFullResponse": {
+            "type": "object",
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_delivery_http.EventResponse"
+                    }
+                },
+                "game": {
+                    "$ref": "#/definitions/internal_delivery_http.GameResponse"
+                },
+                "players": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_delivery_http.PlayerResponse"
+                    }
+                },
+                "teams": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_delivery_http.TeamResponse"
+                    }
+                }
+            }
+        },
+        "internal_delivery_http.GameResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -803,234 +1115,127 @@
                     "type": "string"
                 },
                 "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "type": "string"
                 },
-                "name": {
-                    "type": "string",
-                    "example": "Friday Night Match"
+                "settings": {
+                    "$ref": "#/definitions/internal_delivery_http.GameSettingsDTO"
                 },
                 "started_at": {
                     "type": "string"
                 },
                 "status": {
-                    "type": "string",
-                    "example": "pending"
-                }
-            }
-        },
-        "http.HitEventDetail": {
-            "type": "object",
-            "properties": {
-                "damage": {
-                    "type": "integer",
-                    "example": 25
-                },
-                "device_id": {
-                    "type": "string",
-                    "example": "vest-01"
-                },
-                "is_headshot": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "target_id": {
-                    "type": "string",
-                    "example": "vest-02"
-                },
-                "weapon_id": {
-                    "type": "string",
-                    "example": "wpn-1"
-                }
-            }
-        },
-        "http.HitRequest": {
-            "type": "object",
-            "properties": {
-                "game_id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "hit": {
-                    "$ref": "#/definitions/http.HitEventDetail"
-                }
-            }
-        },
-        "http.JoinRequest": {
-            "type": "object",
-            "properties": {
-                "device_id": {
-                    "type": "string",
-                    "example": "vest-01"
-                },
-                "gun_id": {
-                    "type": "string",
-                    "example": "gun-01"
-                },
-                "nickname": {
-                    "type": "string",
-                    "example": "Player1"
-                },
-                "team_id": {
-                    "type": "string",
-                    "example": "team-uuid"
-                },
-                "user_id": {
-                    "type": "string",
-                    "example": "user-uuid"
-                },
-                "weapon_id": {
-                    "type": "string",
-                    "example": "wpn-1"
-                }
-            }
-        },
-        "http.LeaderboardEntryResponse": {
-            "type": "object",
-            "properties": {
-                "damage_dealt": {
-                    "type": "integer",
-                    "example": 1250
-                },
-                "deaths": {
-                    "type": "integer",
-                    "example": 2
-                },
-                "kills": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "nickname": {
-                    "type": "string",
-                    "example": "Player1"
-                },
-                "player_id": {
                     "type": "string"
-                },
-                "score": {
-                    "type": "integer",
-                    "example": 350
-                },
-                "team_id": {
-                    "type": "string"
-                },
-                "team_name": {
-                    "type": "string",
-                    "example": "Red Team"
                 }
             }
         },
-        "http.LoginRequest": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "secret"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "admin"
-                }
-            }
-        },
-        "http.PlayerConfig": {
+        "internal_delivery_http.GameSettingsDTO": {
             "type": "object",
             "properties": {
                 "friendly_fire": {
-                    "type": "boolean",
-                    "example": false
+                    "type": "boolean"
                 },
-                "lives": {
-                    "type": "integer",
-                    "example": 3
+                "game_duration": {
+                    "type": "integer"
                 },
-                "max_hp": {
-                    "type": "integer",
-                    "example": 100
+                "max_players": {
+                    "type": "integer"
                 },
-                "respawn_delay_seconds": {
-                    "type": "integer",
-                    "example": 5
+                "respawn_delay": {
+                    "type": "integer"
                 }
             }
         },
-        "http.ScoringConfig": {
+        "internal_delivery_http.LoginRequest": {
             "type": "object",
             "properties": {
-                "headshot_multiplier": {
-                    "type": "number",
-                    "example": 2
+                "password": {
+                    "type": "string"
                 },
-                "points_per_hit": {
-                    "type": "integer",
-                    "example": 10
-                },
-                "points_per_kill": {
-                    "type": "integer",
-                    "example": 100
-                },
-                "teamkill_penalty": {
-                    "type": "integer",
-                    "example": 50
+                "username": {
+                    "type": "string"
                 }
             }
         },
-        "http.StatusResponse": {
+        "internal_delivery_http.LoginResponse": {
             "type": "object",
             "properties": {
-                "status": {
-                    "type": "string",
-                    "example": "ok"
-                }
-            }
-        },
-        "http.TeamRequest": {
-            "type": "object",
-            "properties": {
-                "color": {
-                    "type": "string",
-                    "example": "#FF0000"
+                "expires_at": {
+                    "type": "string"
                 },
-                "name": {
-                    "type": "string",
-                    "example": "Red Team"
+                "token": {
+                    "type": "string"
                 }
             }
         },
-        "http.TeamResponse": {
+        "internal_delivery_http.PlayerResponse": {
             "type": "object",
             "properties": {
-                "color": {
-                    "type": "string",
-                    "example": "#FF0000"
+                "deaths": {
+                    "type": "integer"
+                },
+                "device_id": {
+                    "type": "string"
                 },
                 "game_id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "type": "string"
                 },
                 "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "type": "string"
                 },
-                "name": {
-                    "type": "string",
-                    "example": "Red Team"
+                "is_alive": {
+                    "type": "boolean"
+                },
+                "kills": {
+                    "type": "integer"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "team_id": {
+                    "type": "string"
                 }
             }
         },
-        "http.TokenResponse": {
+        "internal_delivery_http.TeamResponse": {
             "type": "object",
             "properties": {
-                "token": {
-                    "type": "string",
-                    "example": "abc123..."
+                "color": {
+                    "type": "string"
+                },
+                "game_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_delivery_http.UpdatePlayerTeamRequest": {
+            "type": "object",
+            "properties": {
+                "team_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_delivery_http.UpdateSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "settings": {
+                    "$ref": "#/definitions/internal_delivery_http.GameSettingsDTO"
                 }
             }
         }
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Enter \"Bearer {token}\" (without quotes)",
+            "description": "Enter \"Bearer {token}\" (without quotes).",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

@@ -3,9 +3,8 @@
        logs logs-postgres logs-redis logs-backend logs-web \
        ps push clean
 
-COMPOSE_BASE  = docker compose -f docker/docker-compose.yml
-COMPOSE_DEV   = $(COMPOSE_BASE) -f docker/docker-compose.dev.yml
-COMPOSE_PROD  = $(COMPOSE_BASE) -f docker/docker-compose.prod.yml
+COMPOSE_DEV   = docker compose -f docker/docker-compose.dev.yml
+COMPOSE_PROD  = docker compose -f docker/docker-compose.prod.yml
 
 # ──────────────────────────────────────────────
 #  Výchozí cíl

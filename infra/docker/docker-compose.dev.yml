@@ -1,45 +1,129 @@
 ## ─────────────────────────────────────────────
-##  Laser Tag — Development overrides
-##  Usage:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+##  Laser Tag — Development
+##  Usage:  docker compose -f docker/docker-compose.dev.yml up --build
 ## ─────────────────────────────────────────────
+name: aimtec2026-lasertag
 
 services:
+  # ── Data stores ──
   postgres:
+    image: postgres:16-alpine
+    env_file: ../../.env
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - lasertag
 
   redis:
+    image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lasertag
 
+  mosquitto:
+    image: eclipse-mosquitto:2-openssl
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquittodata:/mosquitto/data
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lasertag
+
+  # ── Migrations & Seed ──
+  prisma-migrate:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.migrate
+    env_file: ../../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lasertag
+
+  prisma-seed:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.seed
+    env_file: ../../.env
+    depends_on:
+      prisma-migrate:
+        condition: service_completed_successfully
+    networks:
+      - lasertag
+
+  # ── Backend API ──
   backend:
     build:
       context: ../../backend
       dockerfile: Dockerfile
+    env_file: ../../.env
     ports:
       - "8080:8080"
     environment:
       - POSTGRES_HOST=postgres
       - REDIS_ADDR=redis:6379
+      - MQTT_BROKER=tcp://mosquitto:1883
+    depends_on:
+      prisma-seed:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
     volumes:
       - ../../backend:/src
-    # V dev módu se doporučuje spouštět Go přímo na hostu (hot-reload s air)
-    # a nechat jen DB + Redis v kontejnerech.
+    networks:
+      - lasertag
 
+  # ── Web Dashboard ──
   web:
     build:
       context: ../../web
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8080
       - NODE_ENV=development
+    depends_on:
+      backend:
+        condition: service_started
     volumes:
       - ../../web:/app
       - web_node_modules:/app/node_modules
-      - /app/.next
-    command: ["sh", "-c", "npm install && npm run dev"]
+      - web_next:/app/.next
+    networks:
+      - lasertag
 
 volumes:
+  pgdata:
+  redisdata:
+  mosquittodata:
   web_node_modules:
+  web_next:
+
+networks:
+  lasertag:
+    driver: bridge

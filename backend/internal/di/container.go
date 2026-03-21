@@ -8,72 +8,68 @@ import (
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/config"
 	httpdelivery "github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/delivery/http"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/delivery/ws"
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/infrastructure/eventbus"
-	rediscache "github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/infrastructure/redis"
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/infrastructure/mqtt"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/repository/postgres"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase/gamemodes"
-	"github.com/redis/go-redis/v9"
 )
 
+// Container holds all wired dependencies.
 type Container struct {
-	DB          *sql.DB
-	RedisClient *redis.Client
-	Router      http.Handler
+	DB         *sql.DB
+	WSHub      *ws.Hub
+	MQTTClient *mqtt.Client
+	Handler    http.Handler
+	Config     *config.Config
+
+	// UseCases (exposed for background tasks)
+	DeviceUC *usecase.DeviceUseCase
+	GameUC   *usecase.GameUseCase
 }
 
-func NewContainer(cfg *config.Config) *Container {
+func NewContainer(cfg *config.Config) (*Container, error) {
 	// Database
-	db, err := postgres.NewDB(cfg.Postgres)
+	db, err := postgres.NewDB(cfg.PostgresHost, cfg.PostgresPort, cfg.PostgresUser, cfg.PostgresPass, cfg.PostgresDB)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		return nil, err
 	}
-
-	// Redis
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
+	log.Println("[DI] database connected")
 
 	// Repositories
 	userRepo := postgres.NewUserRepo(db)
+	sessionRepo := postgres.NewSessionRepo(db)
+	deviceRepo := postgres.NewDeviceRepo(db)
 	gameRepo := postgres.NewGameRepo(db)
-	playerRepo := postgres.NewGamePlayerRepo(db)
 	teamRepo := postgres.NewTeamRepo(db)
-	weaponRepo := postgres.NewWeaponRepo(db)
-	eventRepo := postgres.NewGameEventRepo(db)
-	sessionRepo := postgres.NewAdminSessionRepo(db)
+	playerRepo := postgres.NewPlayerRepo(db)
+	eventRepo := postgres.NewEventRepo(db)
 
-	// Infrastructure
-	cache := rediscache.NewGameCache(redisClient)
-	bus := eventbus.New()
+	// Use cases
+	authUC := usecase.NewAuthUseCase(userRepo, sessionRepo)
+	deviceUC := usecase.NewDeviceUseCase(deviceRepo)
+	gameUC := usecase.NewGameUseCase(gameRepo, teamRepo, playerRepo, deviceRepo, eventRepo)
+	hitUC := usecase.NewHitUseCase(gameRepo, playerRepo, eventRepo)
 
-	// Game modes
-	registry := gamemodes.NewRegistry()
+	// WebSocket hub
+	wsHub := ws.NewHub()
 
-	// Usecases
-	gameUC := usecase.NewGameUseCase(gameRepo, playerRepo, teamRepo, eventRepo, cache, bus, registry)
-	hitUC := usecase.NewHitUseCase(gameRepo, playerRepo, weaponRepo, eventRepo, cache, bus, registry, gameUC)
-	adminUC := usecase.NewAdminUseCase(userRepo, sessionRepo, gameUC, playerRepo, cache, bus, cfg.JWT)
-	playerUC := usecase.NewPlayerUseCase(playerRepo, gameRepo, teamRepo, eventRepo, cache, bus)
+	// MQTT client
+	mqttClient := mqtt.NewClient(cfg.MQTTBroker, deviceUC, hitUC, gameUC, wsHub.Broadcast)
 
-	// Delivery - HTTP
-	adminHandler := httpdelivery.NewAdminHandler(adminUC)
-	gameHandler := httpdelivery.NewGameHandler(gameUC, adminUC)
-	playerHandler := httpdelivery.NewPlayerHandler(playerUC)
-	deviceHandler := httpdelivery.NewDeviceHandler(hitUC, gameRepo)
-	authMiddleware := httpdelivery.NewAuthMiddleware(adminUC)
+	// HTTP handlers
+	authHandler := httpdelivery.NewAuthHandler(authUC)
+	gameHandler := httpdelivery.NewGameHandler(gameUC, mqttClient)
+	deviceHandler := httpdelivery.NewDeviceHandler(deviceUC)
 
-	// Delivery - WebSocket
-	hub := ws.NewHub(bus)
-	wsHandler := ws.NewHandler(hub)
-
-	router := httpdelivery.NewRouter(adminHandler, gameHandler, playerHandler, deviceHandler, authMiddleware, wsHandler)
+	// Router
+	handler := httpdelivery.NewRouter(authUC, gameHandler, deviceHandler, authHandler, wsHub)
 
 	return &Container{
-		DB:          db,
-		RedisClient: redisClient,
-		Router:      router,
-	}
+		DB:         db,
+		WSHub:      wsHub,
+		MQTTClient: mqttClient,
+		Handler:    handler,
+		Config:     cfg,
+		DeviceUC:   deviceUC,
+		GameUC:     gameUC,
+	}, nil
 }

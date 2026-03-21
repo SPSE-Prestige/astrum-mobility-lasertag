@@ -7,35 +7,35 @@ import (
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
 
-type AdminSessionRepo struct {
-	db *sql.DB
-}
+type SessionRepo struct{ db *sql.DB }
 
-func NewAdminSessionRepo(db *sql.DB) *AdminSessionRepo {
-	return &AdminSessionRepo{db: db}
-}
+func NewSessionRepo(db *sql.DB) *SessionRepo { return &SessionRepo{db: db} }
 
-func (r *AdminSessionRepo) Create(ctx context.Context, session *domain.AdminSession) error {
+func (r *SessionRepo) Create(ctx context.Context, s *domain.Session) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO admin_sessions (id, user_id, token, expires_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		session.ID, session.UserID, session.Token, session.ExpiresAt, session.CreatedAt,
+		`INSERT INTO admin_sessions (id, user_id, token, expires_at, created_at) VALUES ($1,$2,$3,$4,$5)`,
+		s.ID, s.UserID, s.Token, s.ExpiresAt, s.CreatedAt,
 	)
 	return err
 }
 
-func (r *AdminSessionRepo) GetByToken(ctx context.Context, token string) (*domain.AdminSession, error) {
-	var s domain.AdminSession
+func (r *SessionRepo) GetByToken(ctx context.Context, token string) (*domain.Session, error) {
+	s := &domain.Session{}
 	err := r.db.QueryRowContext(ctx,
 		`SELECT id, user_id, token, expires_at, created_at FROM admin_sessions WHERE token = $1`, token,
 	).Scan(&s.ID, &s.UserID, &s.Token, &s.ExpiresAt, &s.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, domain.ErrNotFound
 	}
-	return &s, err
+	return s, err
 }
 
-func (r *AdminSessionRepo) DeleteByUserID(ctx context.Context, userID string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM admin_sessions WHERE user_id = $1`, userID)
+func (r *SessionRepo) DeleteByToken(ctx context.Context, token string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM admin_sessions WHERE token = $1`, token)
+	return err
+}
+
+func (r *SessionRepo) DeleteExpired(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM admin_sessions WHERE expires_at < NOW()`)
 	return err
 }

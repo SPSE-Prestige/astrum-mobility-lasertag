@@ -1,126 +1,89 @@
--- CreateTable
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('admin', 'user');
+CREATE TYPE "DeviceStatus" AS ENUM ('online', 'offline', 'in_game');
+CREATE TYPE "GameStatus" AS ENUM ('lobby', 'running', 'finished');
+
+-- Users
 CREATE TABLE "users" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "username" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'admin',
+    "role" "Role" NOT NULL DEFAULT 'user',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
+CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
--- CreateTable
-CREATE TABLE "games" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending',
-    "config_json" JSONB NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "started_at" TIMESTAMP(3),
-    "ended_at" TIMESTAMP(3),
-
-    CONSTRAINT "games_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "teams" (
-    "id" TEXT NOT NULL,
-    "game_id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "color" TEXT NOT NULL,
-
-    CONSTRAINT "teams_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "game_players" (
-    "id" TEXT NOT NULL,
-    "game_id" TEXT NOT NULL,
-    "user_id" TEXT,
-    "team_id" TEXT,
-    "nickname" TEXT NOT NULL,
-    "device_id" TEXT NOT NULL,
-    "gun_id" TEXT NOT NULL,
-    "weapon_id" TEXT,
-    "hp" INTEGER NOT NULL DEFAULT 100,
-    "score" INTEGER NOT NULL DEFAULT 0,
-    "kills" INTEGER NOT NULL DEFAULT 0,
-    "deaths" INTEGER NOT NULL DEFAULT 0,
-    "is_alive" BOOLEAN NOT NULL DEFAULT true,
-    "lives_remaining" INTEGER NOT NULL DEFAULT -1,
-
-    CONSTRAINT "game_players_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "weapons" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "damage" INTEGER NOT NULL,
-    "fire_rate_ms" INTEGER NOT NULL,
-    "ammo" INTEGER NOT NULL DEFAULT -1,
-    "reload_time_ms" INTEGER NOT NULL DEFAULT 0,
-    "fire_mode" TEXT NOT NULL DEFAULT 'single',
-    "accuracy_spread" DOUBLE PRECISION NOT NULL DEFAULT 0,
-
-    CONSTRAINT "weapons_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "game_events" (
-    "id" TEXT NOT NULL,
-    "game_id" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "player_id" TEXT NOT NULL DEFAULT '',
-    "target_id" TEXT NOT NULL DEFAULT '',
-    "weapon_id" TEXT NOT NULL DEFAULT '',
-    "damage" INTEGER NOT NULL DEFAULT 0,
-    "metadata" JSONB,
-    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "game_events_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
+-- Admin sessions
 CREATE TABLE "admin_sessions" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "user_id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "admin_sessions_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "admin_sessions_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "admin_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
-
--- CreateIndex
-CREATE UNIQUE INDEX "weapons_name_key" ON "weapons"("name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "game_players_game_id_device_id_key" ON "game_players"("game_id", "device_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "game_players_game_id_gun_id_key" ON "game_players"("game_id", "gun_id");
-
--- CreateIndex
 CREATE UNIQUE INDEX "admin_sessions_token_key" ON "admin_sessions"("token");
 
--- AddForeignKey
-ALTER TABLE "teams" ADD CONSTRAINT "teams_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "games"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Devices
+CREATE TABLE "devices" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "device_id" TEXT NOT NULL,
+    "status" "DeviceStatus" NOT NULL DEFAULT 'offline',
+    "last_seen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "devices_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "devices_device_id_key" ON "devices"("device_id");
 
--- AddForeignKey
-ALTER TABLE "game_players" ADD CONSTRAINT "game_players_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "games"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Games
+CREATE TABLE "games" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "code" TEXT NOT NULL,
+    "status" "GameStatus" NOT NULL DEFAULT 'lobby',
+    "settings" JSONB NOT NULL DEFAULT '{}',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "started_at" TIMESTAMP(3),
+    "ended_at" TIMESTAMP(3),
+    CONSTRAINT "games_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "games_code_key" ON "games"("code");
 
--- AddForeignKey
-ALTER TABLE "game_players" ADD CONSTRAINT "game_players_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- Teams
+CREATE TABLE "teams" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "game_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "color" TEXT NOT NULL,
+    CONSTRAINT "teams_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "teams_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "games"("id") ON DELETE CASCADE
+);
 
--- AddForeignKey
-ALTER TABLE "game_players" ADD CONSTRAINT "game_players_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- Players
+CREATE TABLE "players" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "game_id" TEXT NOT NULL,
+    "team_id" TEXT,
+    "device_id" TEXT NOT NULL,
+    "nickname" TEXT NOT NULL,
+    "score" INTEGER NOT NULL DEFAULT 0,
+    "kills" INTEGER NOT NULL DEFAULT 0,
+    "deaths" INTEGER NOT NULL DEFAULT 0,
+    "is_alive" BOOLEAN NOT NULL DEFAULT true,
+    CONSTRAINT "players_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "players_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "games"("id") ON DELETE CASCADE,
+    CONSTRAINT "players_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id"),
+    CONSTRAINT "players_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("device_id")
+);
+CREATE UNIQUE INDEX "players_game_id_device_id_key" ON "players"("game_id", "device_id");
 
--- AddForeignKey
-ALTER TABLE "game_events" ADD CONSTRAINT "game_events_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "games"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Game events
+CREATE TABLE "game_events" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "game_id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "payload" JSONB NOT NULL DEFAULT '{}',
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "game_events_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "game_events_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "games"("id") ON DELETE CASCADE
+);

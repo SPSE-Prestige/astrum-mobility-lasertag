@@ -1,370 +1,210 @@
-basePath: /
+basePath: /api
 definitions:
-  http.ControlCommandRequest:
+  internal_delivery_http.AddPlayerRequest:
     properties:
-      action:
-        example: revive_player
-        type: string
-      game_id:
-        type: string
-      params:
-        additionalProperties: true
-        type: object
-      player_id:
-        example: player-uuid
-        type: string
-    type: object
-  http.CreateGameRequest:
-    properties:
-      config:
-        $ref: '#/definitions/http.GameConfig'
-      name:
-        example: Friday Night Match
-        type: string
-    type: object
-  http.ErrorResponse:
-    properties:
-      error:
-        example: something went wrong
-        type: string
-    type: object
-  http.FeedbackConfig:
-    properties:
-      intensity:
-        example: 80
-        type: integer
-      led_enabled:
-        example: true
-        type: boolean
-      sound_enabled:
-        example: true
-        type: boolean
-      vibration_enabled:
-        example: true
-        type: boolean
-    type: object
-  http.GameConfig:
-    properties:
-      duration_seconds:
-        example: 300
-        type: integer
-      feedback:
-        $ref: '#/definitions/http.FeedbackConfig'
-      game_mode:
-        example: team_deathmatch
-        type: string
-      max_players:
-        example: 20
-        type: integer
-      player:
-        $ref: '#/definitions/http.PlayerConfig'
-      scoring:
-        $ref: '#/definitions/http.ScoringConfig'
-      team_count:
-        example: 2
-        type: integer
-    type: object
-  http.GameLiveStateResponse:
-    properties:
-      game_id:
-        type: string
-      status:
-        example: running
-        type: string
-      team_scores:
-        additionalProperties:
-          type: integer
-        type: object
-      time_remaining_s:
-        example: 180
-        type: integer
-    type: object
-  http.GamePlayerResponse:
-    properties:
-      deaths:
-        example: 0
-        type: integer
       device_id:
-        example: vest-01
         type: string
-      game_id:
-        type: string
-      gun_id:
-        example: gun-01
-        type: string
-      hp:
-        example: 100
-        type: integer
-      id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      is_alive:
-        example: true
-        type: boolean
-      kills:
-        example: 0
-        type: integer
-      lives_remaining:
-        example: 3
-        type: integer
       nickname:
-        example: Player1
         type: string
-      score:
-        example: 0
-        type: integer
       team_id:
         type: string
-      user_id:
+    type: object
+  internal_delivery_http.AddTeamRequest:
+    properties:
+      color:
         type: string
-      weapon_id:
+      name:
         type: string
     type: object
-  http.GameResponse:
+  internal_delivery_http.CreateGameRequest:
     properties:
-      config:
-        $ref: '#/definitions/http.GameConfig'
+      settings:
+        $ref: '#/definitions/internal_delivery_http.GameSettingsDTO'
+    type: object
+  internal_delivery_http.DeviceResponse:
+    properties:
+      device_id:
+        type: string
+      id:
+        type: string
+      last_seen:
+        type: string
+      status:
+        type: string
+    type: object
+  internal_delivery_http.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  internal_delivery_http.EventResponse:
+    properties:
+      game_id:
+        type: string
+      id:
+        type: string
+      payload:
+        additionalProperties: {}
+        type: object
+      timestamp:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_delivery_http.GameFullResponse:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/internal_delivery_http.EventResponse'
+        type: array
+      game:
+        $ref: '#/definitions/internal_delivery_http.GameResponse'
+      players:
+        items:
+          $ref: '#/definitions/internal_delivery_http.PlayerResponse'
+        type: array
+      teams:
+        items:
+          $ref: '#/definitions/internal_delivery_http.TeamResponse'
+        type: array
+    type: object
+  internal_delivery_http.GameResponse:
+    properties:
+      code:
+        type: string
       created_at:
         type: string
       ended_at:
         type: string
       id:
-        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
-      name:
-        example: Friday Night Match
-        type: string
+      settings:
+        $ref: '#/definitions/internal_delivery_http.GameSettingsDTO'
       started_at:
         type: string
       status:
-        example: pending
         type: string
     type: object
-  http.HitEventDetail:
-    properties:
-      damage:
-        example: 25
-        type: integer
-      device_id:
-        example: vest-01
-        type: string
-      is_headshot:
-        example: false
-        type: boolean
-      target_id:
-        example: vest-02
-        type: string
-      weapon_id:
-        example: wpn-1
-        type: string
-    type: object
-  http.HitRequest:
-    properties:
-      game_id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      hit:
-        $ref: '#/definitions/http.HitEventDetail'
-    type: object
-  http.JoinRequest:
-    properties:
-      device_id:
-        example: vest-01
-        type: string
-      gun_id:
-        example: gun-01
-        type: string
-      nickname:
-        example: Player1
-        type: string
-      team_id:
-        example: team-uuid
-        type: string
-      user_id:
-        example: user-uuid
-        type: string
-      weapon_id:
-        example: wpn-1
-        type: string
-    type: object
-  http.LeaderboardEntryResponse:
-    properties:
-      damage_dealt:
-        example: 1250
-        type: integer
-      deaths:
-        example: 2
-        type: integer
-      kills:
-        example: 5
-        type: integer
-      nickname:
-        example: Player1
-        type: string
-      player_id:
-        type: string
-      score:
-        example: 350
-        type: integer
-      team_id:
-        type: string
-      team_name:
-        example: Red Team
-        type: string
-    type: object
-  http.LoginRequest:
-    properties:
-      password:
-        example: secret
-        type: string
-      username:
-        example: admin
-        type: string
-    type: object
-  http.PlayerConfig:
+  internal_delivery_http.GameSettingsDTO:
     properties:
       friendly_fire:
-        example: false
         type: boolean
-      lives:
-        example: 3
+      game_duration:
         type: integer
-      max_hp:
-        example: 100
+      max_players:
         type: integer
-      respawn_delay_seconds:
-        example: 5
+      respawn_delay:
         type: integer
     type: object
-  http.ScoringConfig:
+  internal_delivery_http.LoginRequest:
     properties:
-      headshot_multiplier:
-        example: 2
-        type: number
-      points_per_hit:
-        example: 10
-        type: integer
-      points_per_kill:
-        example: 100
-        type: integer
-      teamkill_penalty:
-        example: 50
-        type: integer
-    type: object
-  http.StatusResponse:
-    properties:
-      status:
-        example: ok
+      password:
+        type: string
+      username:
         type: string
     type: object
-  http.TeamRequest:
+  internal_delivery_http.LoginResponse:
     properties:
-      color:
-        example: '#FF0000'
+      expires_at:
         type: string
-      name:
-        example: Red Team
+      token:
         type: string
     type: object
-  http.TeamResponse:
+  internal_delivery_http.PlayerResponse:
     properties:
-      color:
-        example: '#FF0000'
+      deaths:
+        type: integer
+      device_id:
         type: string
       game_id:
-        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       id:
-        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
-      name:
-        example: Red Team
+      is_alive:
+        type: boolean
+      kills:
+        type: integer
+      nickname:
+        type: string
+      score:
+        type: integer
+      team_id:
         type: string
     type: object
-  http.TokenResponse:
+  internal_delivery_http.TeamResponse:
     properties:
-      token:
-        example: abc123...
+      color:
         type: string
+      game_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  internal_delivery_http.UpdatePlayerTeamRequest:
+    properties:
+      team_id:
+        type: string
+    type: object
+  internal_delivery_http.UpdateSettingsRequest:
+    properties:
+      settings:
+        $ref: '#/definitions/internal_delivery_http.GameSettingsDTO'
     type: object
 host: localhost:8080
 info:
   contact: {}
-  description: Real-time configurable laser tag game engine backend.
-  title: Laser Tag Game API
+  description: REST API for the Aimtec 2026 Laser Tag system — manages games, devices,
+    players, teams and real-time events.
+  title: Laser Tag API
   version: "1.0"
 paths:
-  /api/admin/login:
+  /auth/login:
     post:
       consumes:
       - application/json
-      description: Authenticate an admin user and receive a bearer token.
       parameters:
       - description: Credentials
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/http.LoginRequest'
+          $ref: '#/definitions/internal_delivery_http.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.TokenResponse'
+            $ref: '#/definitions/internal_delivery_http.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       summary: Admin login
       tags:
-      - Admin
-  /api/events/hit:
+      - auth
+  /auth/logout:
     post:
-      consumes:
-      - application/json
-      description: Process a hit event sent from a physical laser tag device.
-      parameters:
-      - description: Hit event
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/http.HitRequest'
-      produces:
-      - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/http.StatusResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
-      summary: Register a hit
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout (invalidate token)
       tags:
-      - Devices
-  /api/games:
+      - auth
+  /devices:
     get:
-      description: Get a list of all games.
       produces:
       - application/json
       responses:
@@ -372,47 +212,105 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/http.GameResponse'
+              $ref: '#/definitions/internal_delivery_http.DeviceResponse'
             type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: List games
+      summary: List all devices
       tags:
-      - Games
+      - devices
+  /devices/available:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.DeviceResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List available (online) devices
+      tags:
+      - devices
+  /games:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.GameResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all games
+      tags:
+      - games
     post:
       consumes:
       - application/json
-      description: Create a new laser tag game with the given configuration.
       parameters:
-      - description: Game definition
+      - description: Game settings (optional)
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/http.CreateGameRequest'
+          $ref: '#/definitions/internal_delivery_http.CreateGameRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/http.GameResponse'
+            $ref: '#/definitions/internal_delivery_http.GameResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create a game
+      summary: Create a new game
       tags:
-      - Games
-  /api/games/{id}:
+      - games
+  /games/{id}:
     get:
-      description: Retrieve a game by its ID.
       parameters:
       - description: Game ID
         in: path
@@ -425,52 +323,22 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.GameResponse'
+            $ref: '#/definitions/internal_delivery_http.GameResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get a game
+      summary: Get game by ID
       tags:
-      - Games
-  /api/games/{id}/control:
+      - games
+  /games/{id}/end:
     post:
-      consumes:
-      - application/json
-      description: Execute an admin action (revive, kick, change_team, restart, etc.).
-      parameters:
-      - description: Game ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Control command
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/http.ControlCommandRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.StatusResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Admin control
-      tags:
-      - Games
-  /api/games/{id}/end:
-    post:
-      description: End a running or paused game and persist final state.
       parameters:
       - description: Game ID
         in: path
@@ -483,21 +351,145 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.StatusResponse'
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/internal_delivery_http.GameResponse'
+        "401":
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: End a game
+      summary: End a game (running → finished)
       tags:
-      - Games
-  /api/games/{id}/join:
+      - games
+  /games/{id}/events:
+    get:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.EventResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get game events (kills, respawns, etc.)
+      tags:
+      - games
+  /games/{id}/full:
+    get:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.GameFullResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get full game state (game + teams + players + events)
+      tags:
+      - games
+  /games/{id}/leaderboard:
+    get:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.PlayerResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get game leaderboard (players sorted by score)
+      tags:
+      - games
+  /games/{id}/players:
+    get:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.PlayerResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List players in a game
+      tags:
+      - players
     post:
       consumes:
       - application/json
-      description: Register a player (with device and gun) into an existing game.
       parameters:
       - description: Game ID
         in: path
@@ -509,183 +501,288 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/http.JoinRequest'
+          $ref: '#/definitions/internal_delivery_http.AddPlayerRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/http.GamePlayerResponse'
+            $ref: '#/definitions/internal_delivery_http.PlayerResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
-      summary: Join a game
-      tags:
-      - Players
-  /api/games/{id}/leaderboard:
-    get:
-      description: Retrieve sorted leaderboard entries for a game.
-      parameters:
-      - description: Game ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
-            items:
-              $ref: '#/definitions/http.LeaderboardEntryResponse'
-            type: array
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
-      summary: Get leaderboard
-      tags:
-      - Players
-  /api/games/{id}/pause:
-    post:
-      description: Pause a currently running game.
-      parameters:
-      - description: Game ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "409":
+          description: Game full or device already in game
           schema:
-            $ref: '#/definitions/http.StatusResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Pause a game
+      summary: Add a player (device) to a game
       tags:
-      - Games
-  /api/games/{id}/players:
-    get:
-      description: Get all players currently registered in a game.
+      - players
+  /games/{id}/players/{playerId}:
+    delete:
       parameters:
       - description: Game ID
         in: path
         name: id
         required: true
         type: string
-      produces:
-      - application/json
+      - description: Player ID
+        in: path
+        name: playerId
+        required: true
+        type: string
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
           schema:
-            items:
-              $ref: '#/definitions/http.GamePlayerResponse'
-            type: array
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
-      summary: List players
-      tags:
-      - Players
-  /api/games/{id}/start:
-    post:
-      description: Transition a game from pending to running.
-      parameters:
-      - description: Game ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.StatusResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Start a game
+      summary: Remove a player from a game
       tags:
-      - Games
-  /api/games/{id}/state:
-    get:
-      description: Retrieve the live state of a game from cache (players, scores,
-        timer).
-      parameters:
-      - description: Game ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.GameLiveStateResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/http.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get game state
-      tags:
-      - Games
-  /api/games/{id}/teams:
-    post:
+      - players
+  /games/{id}/players/{playerId}/team:
+    patch:
       consumes:
       - application/json
-      description: Add a new team to an existing game.
       parameters:
       - description: Game ID
         in: path
         name: id
         required: true
         type: string
-      - description: Team definition
+      - description: Player ID
+        in: path
+        name: playerId
+        required: true
+        type: string
+      - description: New team
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/http.TeamRequest'
+          $ref: '#/definitions/internal_delivery_http.UpdatePlayerTeamRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change a player's team assignment
+      tags:
+      - players
+  /games/{id}/settings:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.UpdateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.GameResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update game settings (lobby only)
+      tags:
+      - games
+  /games/{id}/start:
+    post:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.GameResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a game (lobby → running)
+      tags:
+      - games
+  /games/{id}/teams:
+    get:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.TeamResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List teams in a game
+      tags:
+      - teams
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.AddTeamRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/http.TeamResponse'
+            $ref: '#/definitions/internal_delivery_http.TeamResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create a team
+      summary: Add a team to a game
       tags:
-      - Games
+      - teams
+  /games/{id}/teams/{teamId}:
+    delete:
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team ID
+        in: path
+        name: teamId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove a team
+      tags:
+      - teams
 securityDefinitions:
   BearerAuth:
-    description: Enter "Bearer {token}" (without quotes)
+    description: Enter "Bearer {token}" (without quotes).
     in: header
     name: Authorization
     type: apiKey

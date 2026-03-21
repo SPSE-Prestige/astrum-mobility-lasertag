@@ -4,80 +4,113 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
 
-type GameRepo struct {
-	db *sql.DB
-}
+type GameRepo struct{ db *sql.DB }
 
-func NewGameRepo(db *sql.DB) *GameRepo {
-	return &GameRepo{db: db}
-}
+func NewGameRepo(db *sql.DB) *GameRepo { return &GameRepo{db: db} }
 
-func (r *GameRepo) Create(ctx context.Context, game *domain.Game) error {
-	configBytes, err := json.Marshal(game.Config)
-	if err != nil {
-		return err
-	}
-	_, err = r.db.ExecContext(ctx,
-		`INSERT INTO games (id, name, status, config_json, created_at, started_at, ended_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		game.ID, game.Name, game.Status, configBytes, game.CreatedAt, game.StartedAt, game.EndedAt,
+func (r *GameRepo) Create(ctx context.Context, g *domain.Game) error {
+	settings, _ := json.Marshal(g.Settings)
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO games (id, code, status, settings, created_at) VALUES ($1,$2,$3,$4,$5)`,
+		g.ID, g.Code, g.Status, settings, g.CreatedAt,
 	)
 	return err
 }
 
 func (r *GameRepo) GetByID(ctx context.Context, id string) (*domain.Game, error) {
-	var g domain.Game
-	var configBytes []byte
-	err := r.db.QueryRowContext(ctx,
-		`SELECT id, name, status, config_json, created_at, started_at, ended_at FROM games WHERE id = $1`, id,
-	).Scan(&g.ID, &g.Name, &g.Status, &configBytes, &g.CreatedAt, &g.StartedAt, &g.EndedAt)
+	return r.scanGame(r.db.QueryRowContext(ctx,
+		`SELECT id, code, status, settings, created_at, started_at, ended_at FROM games WHERE id = $1`, id,
+	))
+}
+
+func (r *GameRepo) GetByCode(ctx context.Context, code string) (*domain.Game, error) {
+	return r.scanGame(r.db.QueryRowContext(ctx,
+		`SELECT id, code, status, settings, created_at, started_at, ended_at FROM games WHERE code = $1`, code,
+	))
+}
+
+func (r *GameRepo) Update(ctx context.Context, g *domain.Game) error {
+	settings, _ := json.Marshal(g.Settings)
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE games SET status=$1, settings=$2, started_at=$3, ended_at=$4 WHERE id=$5`,
+		g.Status, settings, g.StartedAt, g.EndedAt, g.ID,
+	)
+	return err
+}
+
+func (r *GameRepo) ListAll(ctx context.Context) ([]domain.Game, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, code, status, settings, created_at, started_at, ended_at FROM games ORDER BY created_at DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return r.scanGames(rows)
+}
+
+func (r *GameRepo) ListByStatus(ctx context.Context, status domain.GameStatus) ([]domain.Game, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, code, status, settings, created_at, started_at, ended_at FROM games WHERE status=$1 ORDER BY created_at DESC`,
+		status,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return r.scanGames(rows)
+}
+
+func (r *GameRepo) scanGame(row *sql.Row) (*domain.Game, error) {
+	g := &domain.Game{}
+	var settingsJSON []byte
+	var startedAt, endedAt sql.NullTime
+	err := row.Scan(&g.ID, &g.Code, &g.Status, &settingsJSON, &g.CreatedAt, &startedAt, &endedAt)
 	if err == sql.ErrNoRows {
 		return nil, domain.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	if len(configBytes) > 0 {
-		_ = json.Unmarshal(configBytes, &g.Config)
+	_ = json.Unmarshal(settingsJSON, &g.Settings)
+	if startedAt.Valid {
+		t := startedAt.Time
+		g.StartedAt = &t
 	}
-	return &g, nil
+	if endedAt.Valid {
+		t := endedAt.Time
+		g.EndedAt = &t
+	}
+	return g, nil
 }
 
-func (r *GameRepo) Update(ctx context.Context, game *domain.Game) error {
-	configBytes, err := json.Marshal(game.Config)
-	if err != nil {
-		return err
-	}
-	_, err = r.db.ExecContext(ctx,
-		`UPDATE games SET name=$1, status=$2, config_json=$3, started_at=$4, ended_at=$5 WHERE id=$6`,
-		game.Name, game.Status, configBytes, game.StartedAt, game.EndedAt, game.ID,
-	)
-	return err
-}
-
-func (r *GameRepo) List(ctx context.Context) ([]*domain.Game, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, status, config_json, created_at, started_at, ended_at FROM games ORDER BY created_at DESC`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var games []*domain.Game
+func (r *GameRepo) scanGames(rows *sql.Rows) ([]domain.Game, error) {
+	var games []domain.Game
 	for rows.Next() {
 		var g domain.Game
-		var configBytes []byte
-		if err := rows.Scan(&g.ID, &g.Name, &g.Status, &configBytes, &g.CreatedAt, &g.StartedAt, &g.EndedAt); err != nil {
+		var settingsJSON []byte
+		var startedAt, endedAt sql.NullTime
+		if err := rows.Scan(&g.ID, &g.Code, &g.Status, &settingsJSON, &g.CreatedAt, &startedAt, &endedAt); err != nil {
 			return nil, err
 		}
-		if len(configBytes) > 0 {
-			_ = json.Unmarshal(configBytes, &g.Config)
+		_ = json.Unmarshal(settingsJSON, &g.Settings)
+		if startedAt.Valid {
+			t := startedAt.Time
+			g.StartedAt = &t
 		}
-		games = append(games, &g)
+		if endedAt.Valid {
+			t := endedAt.Time
+			g.EndedAt = &t
+		}
+		games = append(games, g)
 	}
 	return games, rows.Err()
 }
+
+// Helper for nullable time -> *time.Time
+func timePtr(t time.Time) *time.Time { return &t }

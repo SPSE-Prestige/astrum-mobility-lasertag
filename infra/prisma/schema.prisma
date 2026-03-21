@@ -7,102 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String         @id @default(uuid())
-  username     String         @unique
-  passwordHash String         @map("password_hash")
-  role         String         @default("admin")
-  createdAt    DateTime       @default(now()) @map("created_at")
+enum Role {
+  admin
+  user
+}
 
-  gamePlayers GamePlayer[]
-  sessions    AdminSession[]
+enum DeviceStatus {
+  online
+  offline
+  in_game
+}
+
+enum GameStatus {
+  lobby
+  running
+  finished
+}
+
+// ── Admin users ──
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(user)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sessions Session[]
 
   @@map("users")
 }
 
-model Game {
-  id         String       @id @default(uuid())
-  name       String
-  status     String       @default("pending")
-  configJson Json         @map("config_json")
-  createdAt  DateTime     @default(now()) @map("created_at")
-  startedAt  DateTime?    @map("started_at")
-  endedAt    DateTime?    @map("ended_at")
-
-  players GamePlayer[]
-  teams   Team[]
-  events  GameEvent[]
-
-  @@map("games")
-}
-
-model Team {
-  id     String       @id @default(uuid())
-  gameId String       @map("game_id")
-  name   String
-  color  String
-
-  game    Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  players GamePlayer[]
-
-  @@map("teams")
-}
-
-model GamePlayer {
-  id             String  @id @default(uuid())
-  gameId         String  @map("game_id")
-  userId         String? @map("user_id")
-  teamId         String? @map("team_id")
-  nickname       String
-  deviceId       String  @map("device_id")
-  gunId          String  @map("gun_id")
-  weaponId       String? @map("weapon_id")
-  hp             Int     @default(100)
-  score          Int     @default(0)
-  kills          Int     @default(0)
-  deaths         Int     @default(0)
-  isAlive        Boolean @default(true) @map("is_alive")
-  livesRemaining Int     @default(-1) @map("lives_remaining")
-
-  game Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id])
-  team Team? @relation(fields: [teamId], references: [id])
-
-  @@unique([gameId, deviceId])
-  @@unique([gameId, gunId])
-  @@map("game_players")
-}
-
-model Weapon {
-  id             String @id @default(uuid())
-  name           String @unique
-  damage         Int
-  fireRateMs     Int    @map("fire_rate_ms")
-  ammo           Int    @default(-1)
-  reloadTimeMs   Int    @default(0) @map("reload_time_ms")
-  fireMode       String @default("single") @map("fire_mode")
-  accuracySpread Float  @default(0) @map("accuracy_spread")
-
-  @@map("weapons")
-}
-
-model GameEvent {
-  id        String   @id @default(uuid())
-  gameId    String   @map("game_id")
-  type      String
-  playerId  String   @default("") @map("player_id")
-  targetId  String   @default("") @map("target_id")
-  weaponId  String   @default("") @map("weapon_id")
-  damage    Int      @default(0)
-  metadata  Json?
-  timestamp DateTime @default(now())
-
-  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
-
-  @@map("game_events")
-}
-
-model AdminSession {
+model Session {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
   token     String   @unique
@@ -112,4 +47,76 @@ model AdminSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("admin_sessions")
+}
+
+// ── Devices (ESP32) ──
+model Device {
+  id       String       @id @default(uuid())
+  deviceId String       @unique @map("device_id")
+  status   DeviceStatus @default(offline)
+  lastSeen DateTime     @default(now()) @map("last_seen")
+
+  players Player[]
+
+  @@map("devices")
+}
+
+// ── Games ──
+model Game {
+  id        String     @id @default(uuid())
+  code      String     @unique
+  status    GameStatus @default(lobby)
+  settings  Json       @default("{}")
+  createdAt DateTime   @default(now()) @map("created_at")
+  startedAt DateTime?  @map("started_at")
+  endedAt   DateTime?  @map("ended_at")
+
+  teams   Team[]
+  players Player[]
+  events  GameEvent[]
+
+  @@map("games")
+}
+
+model Team {
+  id     String @id @default(uuid())
+  gameId String @map("game_id")
+  name   String
+  color  String
+
+  game    Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  players Player[]
+
+  @@map("teams")
+}
+
+model Player {
+  id       String @id @default(uuid())
+  gameId   String @map("game_id")
+  teamId   String? @map("team_id")
+  deviceId String @map("device_id")
+  nickname String
+  score    Int    @default(0)
+  kills    Int    @default(0)
+  deaths   Int    @default(0)
+  isAlive  Boolean @default(true) @map("is_alive")
+
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team   Team?  @relation(fields: [teamId], references: [id])
+  device Device @relation(fields: [deviceId], references: [deviceId])
+
+  @@unique([gameId, deviceId])
+  @@map("players")
+}
+
+model GameEvent {
+  id        String   @id @default(uuid())
+  gameId    String   @map("game_id")
+  type      String
+  payload   Json     @default("{}")
+  timestamp DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("game_events")
 }
