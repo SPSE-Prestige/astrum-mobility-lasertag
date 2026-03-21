@@ -1,0 +1,11 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY prisma/package.json ./package.json
+RUN npm install
+
+COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/migrations/ ./prisma/migrations/
+
+CMD ["npx", "prisma", "migrate", "deploy"]

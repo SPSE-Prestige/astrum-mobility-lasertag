@@ -1,0 +1,692 @@
+basePath: /
+definitions:
+  http.ControlCommandRequest:
+    properties:
+      action:
+        example: revive_player
+        type: string
+      game_id:
+        type: string
+      params:
+        additionalProperties: true
+        type: object
+      player_id:
+        example: player-uuid
+        type: string
+    type: object
+  http.CreateGameRequest:
+    properties:
+      config:
+        $ref: '#/definitions/http.GameConfig'
+      name:
+        example: Friday Night Match
+        type: string
+    type: object
+  http.ErrorResponse:
+    properties:
+      error:
+        example: something went wrong
+        type: string
+    type: object
+  http.FeedbackConfig:
+    properties:
+      intensity:
+        example: 80
+        type: integer
+      led_enabled:
+        example: true
+        type: boolean
+      sound_enabled:
+        example: true
+        type: boolean
+      vibration_enabled:
+        example: true
+        type: boolean
+    type: object
+  http.GameConfig:
+    properties:
+      duration_seconds:
+        example: 300
+        type: integer
+      feedback:
+        $ref: '#/definitions/http.FeedbackConfig'
+      game_mode:
+        example: team_deathmatch
+        type: string
+      max_players:
+        example: 20
+        type: integer
+      player:
+        $ref: '#/definitions/http.PlayerConfig'
+      scoring:
+        $ref: '#/definitions/http.ScoringConfig'
+      team_count:
+        example: 2
+        type: integer
+    type: object
+  http.GameLiveStateResponse:
+    properties:
+      game_id:
+        type: string
+      status:
+        example: running
+        type: string
+      team_scores:
+        additionalProperties:
+          type: integer
+        type: object
+      time_remaining_s:
+        example: 180
+        type: integer
+    type: object
+  http.GamePlayerResponse:
+    properties:
+      deaths:
+        example: 0
+        type: integer
+      device_id:
+        example: vest-01
+        type: string
+      game_id:
+        type: string
+      gun_id:
+        example: gun-01
+        type: string
+      hp:
+        example: 100
+        type: integer
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      is_alive:
+        example: true
+        type: boolean
+      kills:
+        example: 0
+        type: integer
+      lives_remaining:
+        example: 3
+        type: integer
+      nickname:
+        example: Player1
+        type: string
+      score:
+        example: 0
+        type: integer
+      team_id:
+        type: string
+      user_id:
+        type: string
+      weapon_id:
+        type: string
+    type: object
+  http.GameResponse:
+    properties:
+      config:
+        $ref: '#/definitions/http.GameConfig'
+      created_at:
+        type: string
+      ended_at:
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: Friday Night Match
+        type: string
+      started_at:
+        type: string
+      status:
+        example: pending
+        type: string
+    type: object
+  http.HitEventDetail:
+    properties:
+      damage:
+        example: 25
+        type: integer
+      device_id:
+        example: vest-01
+        type: string
+      is_headshot:
+        example: false
+        type: boolean
+      target_id:
+        example: vest-02
+        type: string
+      weapon_id:
+        example: wpn-1
+        type: string
+    type: object
+  http.HitRequest:
+    properties:
+      game_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      hit:
+        $ref: '#/definitions/http.HitEventDetail'
+    type: object
+  http.JoinRequest:
+    properties:
+      device_id:
+        example: vest-01
+        type: string
+      gun_id:
+        example: gun-01
+        type: string
+      nickname:
+        example: Player1
+        type: string
+      team_id:
+        example: team-uuid
+        type: string
+      user_id:
+        example: user-uuid
+        type: string
+      weapon_id:
+        example: wpn-1
+        type: string
+    type: object
+  http.LeaderboardEntryResponse:
+    properties:
+      damage_dealt:
+        example: 1250
+        type: integer
+      deaths:
+        example: 2
+        type: integer
+      kills:
+        example: 5
+        type: integer
+      nickname:
+        example: Player1
+        type: string
+      player_id:
+        type: string
+      score:
+        example: 350
+        type: integer
+      team_id:
+        type: string
+      team_name:
+        example: Red Team
+        type: string
+    type: object
+  http.LoginRequest:
+    properties:
+      password:
+        example: secret
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  http.PlayerConfig:
+    properties:
+      friendly_fire:
+        example: false
+        type: boolean
+      lives:
+        example: 3
+        type: integer
+      max_hp:
+        example: 100
+        type: integer
+      respawn_delay_seconds:
+        example: 5
+        type: integer
+    type: object
+  http.ScoringConfig:
+    properties:
+      headshot_multiplier:
+        example: 2
+        type: number
+      points_per_hit:
+        example: 10
+        type: integer
+      points_per_kill:
+        example: 100
+        type: integer
+      teamkill_penalty:
+        example: 50
+        type: integer
+    type: object
+  http.StatusResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  http.TeamRequest:
+    properties:
+      color:
+        example: '#FF0000'
+        type: string
+      name:
+        example: Red Team
+        type: string
+    type: object
+  http.TeamResponse:
+    properties:
+      color:
+        example: '#FF0000'
+        type: string
+      game_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: Red Team
+        type: string
+    type: object
+  http.TokenResponse:
+    properties:
+      token:
+        example: abc123...
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Real-time configurable laser tag game engine backend.
+  title: Laser Tag Game API
+  version: "1.0"
+paths:
+  /api/admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate an admin user and receive a bearer token.
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Admin login
+      tags:
+      - Admin
+  /api/events/hit:
+    post:
+      consumes:
+      - application/json
+      description: Process a hit event sent from a physical laser tag device.
+      parameters:
+      - description: Hit event
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.HitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Register a hit
+      tags:
+      - Devices
+  /api/games:
+    get:
+      description: Get a list of all games.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.GameResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List games
+      tags:
+      - Games
+    post:
+      consumes:
+      - application/json
+      description: Create a new laser tag game with the given configuration.
+      parameters:
+      - description: Game definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateGameRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.GameResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a game
+      tags:
+      - Games
+  /api/games/{id}:
+    get:
+      description: Retrieve a game by its ID.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.GameResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a game
+      tags:
+      - Games
+  /api/games/{id}/control:
+    post:
+      consumes:
+      - application/json
+      description: Execute an admin action (revive, kick, change_team, restart, etc.).
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Control command
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.ControlCommandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Admin control
+      tags:
+      - Games
+  /api/games/{id}/end:
+    post:
+      description: End a running or paused game and persist final state.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: End a game
+      tags:
+      - Games
+  /api/games/{id}/join:
+    post:
+      consumes:
+      - application/json
+      description: Register a player (with device and gun) into an existing game.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Player data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.JoinRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.GamePlayerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Join a game
+      tags:
+      - Players
+  /api/games/{id}/leaderboard:
+    get:
+      description: Retrieve sorted leaderboard entries for a game.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.LeaderboardEntryResponse'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get leaderboard
+      tags:
+      - Players
+  /api/games/{id}/pause:
+    post:
+      description: Pause a currently running game.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Pause a game
+      tags:
+      - Games
+  /api/games/{id}/players:
+    get:
+      description: Get all players currently registered in a game.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.GamePlayerResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: List players
+      tags:
+      - Players
+  /api/games/{id}/start:
+    post:
+      description: Transition a game from pending to running.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a game
+      tags:
+      - Games
+  /api/games/{id}/state:
+    get:
+      description: Retrieve the live state of a game from cache (players, scores,
+        timer).
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.GameLiveStateResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get game state
+      tags:
+      - Games
+  /api/games/{id}/teams:
+    post:
+      consumes:
+      - application/json
+      description: Add a new team to an existing game.
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.TeamRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a team
+      tags:
+      - Games
+securityDefinitions:
+  BearerAuth:
+    description: Enter "Bearer {token}" (without quotes)
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

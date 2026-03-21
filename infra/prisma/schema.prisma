@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  username     String         @unique
+  passwordHash String         @map("password_hash")
+  role         String         @default("admin")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  gamePlayers GamePlayer[]
+  sessions    AdminSession[]
+
+  @@map("users")
+}
+
+model Game {
+  id         String       @id @default(uuid())
+  name       String
+  status     String       @default("pending")
+  configJson Json         @map("config_json")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  startedAt  DateTime?    @map("started_at")
+  endedAt    DateTime?    @map("ended_at")
+
+  players GamePlayer[]
+  teams   Team[]
+  events  GameEvent[]
+
+  @@map("games")
+}
+
+model Team {
+  id     String       @id @default(uuid())
+  gameId String       @map("game_id")
+  name   String
+  color  String
+
+  game    Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  players GamePlayer[]
+
+  @@map("teams")
+}
+
+model GamePlayer {
+  id             String  @id @default(uuid())
+  gameId         String  @map("game_id")
+  userId         String? @map("user_id")
+  teamId         String? @map("team_id")
+  nickname       String
+  deviceId       String  @map("device_id")
+  gunId          String  @map("gun_id")
+  weaponId       String? @map("weapon_id")
+  hp             Int     @default(100)
+  score          Int     @default(0)
+  kills          Int     @default(0)
+  deaths         Int     @default(0)
+  isAlive        Boolean @default(true) @map("is_alive")
+  livesRemaining Int     @default(-1) @map("lives_remaining")
+
+  game Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@unique([gameId, deviceId])
+  @@unique([gameId, gunId])
+  @@map("game_players")
+}
+
+model Weapon {
+  id             String @id @default(uuid())
+  name           String @unique
+  damage         Int
+  fireRateMs     Int    @map("fire_rate_ms")
+  ammo           Int    @default(-1)
+  reloadTimeMs   Int    @default(0) @map("reload_time_ms")
+  fireMode       String @default("single") @map("fire_mode")
+  accuracySpread Float  @default(0) @map("accuracy_spread")
+
+  @@map("weapons")
+}
+
+model GameEvent {
+  id        String   @id @default(uuid())
+  gameId    String   @map("game_id")
+  type      String
+  playerId  String   @default("") @map("player_id")
+  targetId  String   @default("") @map("target_id")
+  weaponId  String   @default("") @map("weapon_id")
+  damage    Int      @default(0)
+  metadata  Json?
+  timestamp DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("game_events")
+}
+
+model AdminSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_sessions")
+}
