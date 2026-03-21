@@ -200,7 +200,6 @@ export default function Home() {
 
             <section className="space-y-6">
               <header>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{language === "cs" ? "Fáze 1" : "Phase 1"}</p>
                 <h1 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">{language === "cs" ? "Nastavení hry" : "Setup Control"}</h1>
               </header>
 
@@ -418,7 +417,6 @@ export default function Home() {
           {state.phase === "results" && (
             <section className="space-y-5">
               <header>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{language === "cs" ? "Fáze 3" : "Phase 3"}</p>
                 <h2 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">{language === "cs" ? "Finální výsledky" : "Final Results"}</h2>
               </header>
 
@@ -445,9 +443,6 @@ export default function Home() {
                       </p>
                       <p>
                         {language === "cs" ? "Přesnost" : "Accuracy"}: <span className="text-[#00ff00]">{teamResult.accuracy}%</span>
-                      </p>
-                      <p>
-                        {language === "cs" ? "Udělené poškození" : "Damage Dealt"}: <span className="text-[#ff0000]">{teamResult.damageDealt}</span>
                       </p>
                     </div>
                   </article>

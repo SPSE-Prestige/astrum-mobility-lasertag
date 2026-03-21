@@ -47,9 +47,6 @@ export const PlayerRegistration = ({
   return (
     <section className="space-y-6">
       <header>
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-          {language === "cs" ? "Správa hráčů" : "Player Management"}
-        </p>
         <h1 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">
           {language === "cs" ? "Hráči a Lobby" : "Players & Lobby"}
         </h1>
