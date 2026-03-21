@@ -1,12 +1,16 @@
 import { Battery, Crosshair, Shield } from "lucide-react";
 import type { Player } from "@/types/game";
+import type { Language } from "@/types/i18n";
 
 interface PlayerCardProps {
   player: Player;
+  language: Language;
 }
 
-export const PlayerCard = ({ player }: PlayerCardProps) => {
+export const PlayerCard = ({ player, language }: PlayerCardProps) => {
   const hpWidth = `${player.hp}%`;
+  const statusLabel =
+    player.status === "active" ? (language === "cs" ? "aktivní" : "active") : language === "cs" ? "omráčen" : "stunned";
 
   return (
     <article className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
@@ -22,7 +26,7 @@ export const PlayerCard = ({ player }: PlayerCardProps) => {
               : "border-[#ff0000]/50 bg-[#ff0000]/10 text-[#ff0000]"
           }`}
         >
-          {player.status}
+          {statusLabel}
         </span>
       </div>
 
@@ -41,13 +45,13 @@ export const PlayerCard = ({ player }: PlayerCardProps) => {
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-zinc-300">
         <div className="rounded-md border border-zinc-800 bg-black/40 p-2">
           <p className="inline-flex items-center gap-1 text-zinc-500">
-            <Battery className="h-3.5 w-3.5" /> Ammo
+            <Battery className="h-3.5 w-3.5" /> {language === "cs" ? "Munice" : "Ammo"}
           </p>
           <p className="mt-1 text-sm font-semibold">{player.ammo}</p>
         </div>
         <div className="rounded-md border border-zinc-800 bg-black/40 p-2">
           <p className="inline-flex items-center gap-1 text-zinc-500">
-            <Crosshair className="h-3.5 w-3.5" /> Hits
+            <Crosshair className="h-3.5 w-3.5" /> {language === "cs" ? "Trefy" : "Hits"}
           </p>
           <p className="mt-1 text-sm font-semibold">{player.hits}</p>
         </div>

@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Pencil, Save, Trash2, X } from "lucide-react";
 import type { MatchHistoryItem } from "@/types/game";
+import type { Language } from "@/types/i18n";
 
 interface MatchHistoryManagerProps {
   items: MatchHistoryItem[];
+  language: Language;
   onUpdate: (
     matchId: string,
     patch: Partial<Pick<MatchHistoryItem, "gameName" | "winner" | "durationMinutes" | "totalKills">>,
@@ -13,7 +15,7 @@ interface MatchHistoryManagerProps {
   onDelete: (matchId: string) => void;
 }
 
-export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryManagerProps) => {
+export const MatchHistoryManager = ({ items, language, onUpdate, onDelete }: MatchHistoryManagerProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ gameName: "", winner: "", durationMinutes: 0, totalKills: 0 });
 
@@ -29,7 +31,7 @@ export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryM
 
   return (
     <section className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
-      <p className="mb-3 text-xs uppercase tracking-[0.18em] text-zinc-500">Historie zápasů</p>
+      <p className="mb-3 text-xs uppercase tracking-[0.18em] text-zinc-500">{language === "cs" ? "Historie zápasů" : "Match History"}</p>
       <div className="space-y-3">
         {items.map((item) => {
           const isEditing = editingId === item.id;
@@ -42,7 +44,7 @@ export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryM
                     <div>
                       <p className="text-sm font-semibold text-zinc-100">{item.gameName}</p>
                       <p className="text-xs text-zinc-500">
-                        {new Date(item.playedAt).toLocaleString("cs-CZ")} | {item.gameMode === "ffa" ? "Každý proti každému" : "Týmová"}
+                        {new Date(item.playedAt).toLocaleString(language === "cs" ? "cs-CZ" : "en-US")} | {item.gameMode === "ffa" ? (language === "cs" ? "Každý proti každému" : "Free For All") : language === "cs" ? "Týmová" : "Team"}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -63,8 +65,8 @@ export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryM
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-zinc-300 md:grid-cols-4">
-                    <p>Vítěz: {item.winner}</p>
-                    <p>Délka: {item.durationMinutes} min</p>
+                    <p>{language === "cs" ? "Vítěz" : "Winner"}: {item.winner}</p>
+                    <p>{language === "cs" ? "Délka" : "Duration"}: {item.durationMinutes} min</p>
                     <p>Kills: {item.totalKills}</p>
                   </div>
                 </>
@@ -81,14 +83,14 @@ export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryM
                     <input
                       value={draft.winner}
                       onChange={(event) => setDraft((prev) => ({ ...prev, winner: event.target.value }))}
-                      placeholder="Vítěz"
+                      placeholder={language === "cs" ? "Vítěz" : "Winner"}
                       className="rounded-md border border-zinc-700 bg-black px-3 py-2 text-sm text-zinc-100"
                     />
                     <input
                       type="number"
                       value={draft.durationMinutes}
                       onChange={(event) => setDraft((prev) => ({ ...prev, durationMinutes: Number(event.target.value) }))}
-                      placeholder="Délka"
+                      placeholder={language === "cs" ? "Délka" : "Duration"}
                       className="rounded-md border border-zinc-700 bg-black px-3 py-2 text-sm text-zinc-100"
                     />
                     <input
@@ -109,7 +111,7 @@ export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryM
                       className="inline-flex items-center gap-1 rounded-md border border-[#00ff00]/70 bg-[#00ff00]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#00ff00]"
                     >
                       <Save className="h-3.5 w-3.5" />
-                      Uložit
+                      {language === "cs" ? "Uložit" : "Save"}
                     </button>
                     <button
                       type="button"
@@ -117,7 +119,7 @@ export const MatchHistoryManager = ({ items, onUpdate, onDelete }: MatchHistoryM
                       className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-zinc-300"
                     >
                       <X className="h-3.5 w-3.5" />
-                      Zrušit
+                      {language === "cs" ? "Zrušit" : "Cancel"}
                     </button>
                   </div>
                 </div>

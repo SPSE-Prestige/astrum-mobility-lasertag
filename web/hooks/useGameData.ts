@@ -84,7 +84,7 @@ const initialState: GameState = {
     {
       id: "k1",
       timestamp: "00:00",
-      message: "System ready. Waiting for start signal.",
+      message: "event.systemReady",
     },
   ],
   teamResults: [
@@ -276,7 +276,7 @@ export const useGameData = () => {
                 {
                   id: crypto.randomUUID(),
                   timestamp: formatRaceTime(config.durationMinutes * 60 - nextTime),
-                  message: `${randomKiller.name} tagged ${randomVictim.name}`,
+                  message: `event.tag:${randomKiller.name}:${randomVictim.name}`,
                 },
                 ...prev.killFeed,
               ].slice(0, 8)
@@ -313,7 +313,36 @@ export const useGameData = () => {
   );
 
   const updatePhase = (phase: GamePhase) => {
-    setState((prev) => ({ ...prev, phase }));
+    setState((prev) => {
+      if (phase === prev.phase) {
+        return prev;
+      }
+
+      // Manual switch to live phase is not allowed (only via start button).
+      if (phase === "live") {
+        return prev;
+      }
+
+      if (phase === "setup" && prev.phase === "results") {
+        // Returning from results to setup prepares a fresh game state.
+        return {
+          ...initialState,
+          phase: "setup",
+          raceTimeSeconds: config.durationMinutes * 60,
+          teamResults: calculateTeamResults(initialPlayers, config.gameMode),
+        };
+      }
+
+      // Setup <-> Results should be freely accessible.
+      if ((prev.phase === "setup" && phase === "results") || (prev.phase === "results" && phase === "setup")) {
+        return {
+          ...prev,
+          phase,
+        };
+      }
+
+      return prev;
+    });
   };
 
   const updateConfig = (nextConfig: GameConfig) => {
@@ -349,7 +378,10 @@ export const useGameData = () => {
   };
 
   const pauseRace = () => {
-    setState((prev) => ({ ...prev, raceStatus: "paused" }));
+    setState((prev) => ({
+      ...prev,
+      raceStatus: prev.raceStatus === "paused" ? "running" : "paused",
+    }));
   };
 
   const stopRace = () => {
@@ -374,7 +406,7 @@ export const useGameData = () => {
       setAuth({
         isAuthenticated: false,
         username: null,
-        error: "Neplatné uživatelské jméno nebo heslo.",
+        error: "invalid_credentials",
       });
       return false;
     }
