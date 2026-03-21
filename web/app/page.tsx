@@ -8,6 +8,7 @@ import { LoginPanel } from "@/components/race-control/LoginPanel";
 import { MatchHistoryManager } from "@/components/race-control/MatchHistoryManager";
 import { PhaseSidebar } from "@/components/race-control/PhaseSidebar";
 import { PlayerCard } from "@/components/race-control/PlayerCard";
+import { PlayerRegistration } from "@/components/race-control/PlayerRegistration";
 import { useGameData } from "@/hooks/useGameData";
 import type { Language } from "@/types/i18n";
 
@@ -43,6 +44,11 @@ export default function Home() {
     auth,
     leaderboard,
     matchHistory,
+    registeredPlayers,
+    activeRoster,
+    registerPlayer,
+    deleteRegisteredPlayer,
+    toggleRosterPlayer,
     updateConfig,
     updatePhase,
     assignPlayerTeam,
@@ -295,66 +301,10 @@ export default function Home() {
                 <article className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
                   <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
                     <SlidersHorizontal className="h-4 w-4 text-[#ff0000]" />
-                    {language === "cs" ? "Ladění zbraní a hráčů" : "Weapon & Player Tuning"}
+                    {language === "cs" ? "Ladění hráčů a vozíku" : "Player & Cart Tuning"}
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      {language === "cs" ? "Poškození" : "Damage"}
-                      <input
-                        type="number"
-                        value={config.weaponTuning.damage}
-                        onChange={(event) =>
-                          updateConfig({
-                            ...config,
-                            weaponTuning: { ...config.weaponTuning, damage: Number(event.target.value) },
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-                      />
-                    </label>
-                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      {language === "cs" ? "Kadence střelby" : "Fire Rate"}
-                      <input
-                        type="number"
-                        value={config.weaponTuning.fireRate}
-                        onChange={(event) =>
-                          updateConfig({
-                            ...config,
-                            weaponTuning: { ...config.weaponTuning, fireRate: Number(event.target.value) },
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-                      />
-                    </label>
-                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      {language === "cs" ? "Čas přebití" : "Reload Time"}
-                      <input
-                        type="number"
-                        value={config.weaponTuning.reloadTime}
-                        onChange={(event) =>
-                          updateConfig({
-                            ...config,
-                            weaponTuning: { ...config.weaponTuning, reloadTime: Number(event.target.value) },
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-                      />
-                    </label>
-                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      HP
-                      <input
-                        type="number"
-                        value={config.playerTuning.hp}
-                        onChange={(event) =>
-                          updateConfig({
-                            ...config,
-                            playerTuning: { ...config.playerTuning, hp: Number(event.target.value) },
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-                      />
-                    </label>
-                    <label className="col-span-2 text-xs uppercase tracking-[0.14em] text-zinc-500">
                       {language === "cs" ? "Prodleva respawnu" : "Respawn Delay"}
                       <input
                         type="number"
@@ -368,37 +318,84 @@ export default function Home() {
                         className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
                       />
                     </label>
+                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                      {language === "cs" ? "Rychlost vozíku" : "Cart Speed"}
+                      <input
+                        type="number"
+                        value={config.playerTuning.cartSpeed}
+                        onChange={(event) =>
+                          updateConfig({
+                            ...config,
+                            playerTuning: { ...config.playerTuning, cartSpeed: Number(event.target.value) },
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+                      />
+                    </label>
                   </div>
                 </article>
-              </div>
 
-              <article className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
-                <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
-                  <Users className="h-4 w-4 text-zinc-200" />
-                  {language === "cs" ? "Lobby vozíků a přiřazení" : "Cart Lobby & Assignment"}
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {state.players.map((player) => (
-                    <div key={player.id} className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3">
-                      <p className="text-sm font-semibold text-zinc-100">{player.name}</p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {language === "cs" ? "Vozík" : "Cart"}: {player.cartConnected ? (language === "cs" ? "Připojen" : "Connected") : language === "cs" ? "Offline" : "Offline"}
-                      </p>
-                      <select
-                        value={config.gameMode === "ffa" ? "Unassigned" : player.team}
-                        disabled={config.gameMode === "ffa"}
-                        className="mt-2 w-full rounded-md border border-zinc-700 bg-black px-2 py-1 text-xs text-zinc-200"
-                        onChange={(event) => assignPlayerTeam(player.id, event.target.value)}
-                      >
-                        <option>Neon Green</option>
-                        <option>Neon Red</option>
-                        <option>{language === "cs" ? "Nepřiřazeno" : "Unassigned"}</option>
-                      </select>
+                <article className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+                  <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
+                    <Users className="h-4 w-4 text-[#00ff00]" />
+                    {language === "cs" ? "Přiřazení hráčů do týmů" : "Assign Players to Teams"}
+                  </h3>
+                  
+                  {config.gameMode === "ffa" ? (
+                    <div className="rounded-lg border border-zinc-700 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">
+                      {language === "cs"
+                        ? "V režimu 'Každý proti každému' se týmy nepoužívají."
+                        : "In 'Free For All' mode, teams are not used."}
                     </div>
-                  ))}
-                </div>
-              </article>
+                  ) : (
+                    <div className="space-y-3">
+                      {Array.from({ length: config.teamsCount }).map((_, teamIdx) => {
+                        const teams = ["Neon Green", "Neon Red", "Neon Blue", "Neon Yellow"];
+                        const teamName = teams[teamIdx] || `Team ${teamIdx + 1}`;
+                        const playersInTeam = state.players.filter((p) => p.team === teamName);
+
+                        return (
+                          <div key={teamIdx} className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-300">{teamName}</p>
+                            <div className="space-y-2">
+                              {state.players.map((player) => {
+                                const isInThisTeam = player.team === teamName;
+                                return (
+                                  <button
+                                    key={player.id}
+                                    onClick={() => assignPlayerTeam(player.id, isInThisTeam ? "Unassigned" : teamName)}
+                                    className={`w-full rounded-md border px-3 py-2 text-left text-sm transition ${
+                                      isInThisTeam
+                                        ? "border-[#00ff00]/50 bg-[#00ff00]/10 text-[#00ff00]"
+                                        : "border-zinc-700 bg-zinc-800/30 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800/50"
+                                    }`}
+                                  >
+                                    {player.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </article>
+              </div>
             </section>
+          )}
+
+          {state.phase === "players" && (
+            <PlayerRegistration
+              activePlayers={state.players}
+              registeredPlayers={registeredPlayers}
+              activeRoster={activeRoster}
+              gameMode={config.gameMode}
+              language={language}
+              onRegister={registerPlayer}
+              onDeleteRegistry={deleteRegisteredPlayer}
+              onToggleRoster={toggleRosterPlayer}
+            />
           )}
 
           {state.phase === "live" && (

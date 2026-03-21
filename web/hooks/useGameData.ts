@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { AuthState, GameConfig, GameMode, GamePhase, GameState, MatchHistoryItem, Player } from "@/types/game";
+import type { AuthState, GameConfig, GameMode, GamePhase, GameState, MatchHistoryItem, Player, RegisteredPlayer } from "@/types/game";
 
 const initialConfig: GameConfig = {
   gameName: "Aimtec Night Grand Prix",
@@ -17,6 +17,7 @@ const initialConfig: GameConfig = {
   playerTuning: {
     hp: 100,
     respawnDelay: 4,
+    cartSpeed: 28,
   },
 };
 
@@ -104,6 +105,7 @@ const initialState: GameState = {
 };
 
 const HISTORY_STORAGE_KEY = "race-control-history";
+const PLAYERS_STORAGE_KEY = "race-control-registered-players";
 
 const initialAuthState: AuthState = {
   isAuthenticated: false,
@@ -217,6 +219,84 @@ export const useGameData = () => {
     }
   });
 
+  const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+
+    const stored = window.localStorage.getItem(PLAYERS_STORAGE_KEY);
+    if (!stored) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(stored) as RegisteredPlayer[];
+    } catch {
+      return [];
+    }
+  });
+
+  const [activeRoster, setActiveRoster] = useState<string[]>([]);
+  // We want to persist this roster or load from current players on init maybe?
+  // For now, let's keep it simple.
+
+  useEffect(() => {
+    localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(registeredPlayers));
+  }, [registeredPlayers]);
+
+  const toggleRosterPlayer = (playerId: string) => {
+    setActiveRoster((prev) => {
+      const next = prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId];
+      return next;
+    });
+  };
+
+  // Sync state.players with activeRoster
+  useEffect(() => {
+    // Only update players list if we are in setup or players management phase
+    if (state.phase !== "setup" && state.phase !== "players") return;
+
+    if (activeRoster.length === 0) {
+      // If roster cleared, maybe we don't want to show empty list? Or maybe we do.
+      // Let's allow empty list for now.
+      if (state.players.length > 0 && state.players.every((p) => registeredPlayers.some((rp) => rp.id === p.id))) {
+         setState((prev) => ({ ...prev, players: [] }));
+      }
+      return;
+    }
+
+    const currentPlayersMap = new Map(state.players.map((p) => [p.id, p]));
+
+    const newPlayersList = activeRoster
+      .map((rosterId) => {
+        const registered = registeredPlayers.find((rp) => rp.id === rosterId);
+        if (!registered) return null;
+
+        const existing = currentPlayersMap.get(rosterId);
+        if (existing) return existing;
+
+        return {
+          id: registered.id,
+          name: registered.name,
+          team: "Unassigned",
+          hp: config.playerTuning.hp,
+          ammo: 60,
+          status: "active",
+          kills: 0,
+          hits: 0,
+          accuracy: 0,
+          damageDealt: 0,
+          cartConnected: true,
+        } as Player;
+      })
+      .filter((p): p is Player => p !== null);
+
+    setState((prev) => ({
+      ...prev,
+      players: newPlayersList,
+    }));
+  }, [activeRoster, registeredPlayers, config.playerTuning.hp]); // Removed state.phase to avoid loop, handled by check inside
+
   const appendHistoryEntry = (players: Player[], mode: GameMode, currentConfig: GameConfig) => {
     setMatchHistory((prev) => [
       {
@@ -323,6 +403,10 @@ export const useGameData = () => {
         return prev;
       }
 
+      if (prev.raceStatus === "running") {
+        return prev;
+      }
+
       if (phase === "setup" && prev.phase === "results") {
         // Returning from results to setup prepares a fresh game state.
         return {
@@ -333,8 +417,14 @@ export const useGameData = () => {
         };
       }
 
-      // Setup <-> Results should be freely accessible.
-      if ((prev.phase === "setup" && phase === "results") || (prev.phase === "results" && phase === "setup")) {
+      const allowedTransitions: Record<GamePhase, GamePhase[]> = {
+        setup: ["players", "results"],
+        players: ["setup", "results"],
+        results: ["setup", "players"],
+        live: [],
+      };
+
+      if (allowedTransitions[prev.phase].includes(phase)) {
         return {
           ...prev,
           phase,
@@ -434,12 +524,58 @@ export const useGameData = () => {
     setMatchHistory((prev) => prev.filter((item) => item.id !== matchId));
   };
 
+  const registerPlayer = (name: string, type: "guest" | "registered" = "registered") => {
+    const SUPERHERO_NAMES = [
+      "Hulk",
+      "Thor",
+      "Iron Man",
+      "Spiderman",
+      "Batman",
+      "Superman",
+      "Wonder Woman",
+      "Flash",
+      "Black Widow",
+      "Captain America",
+      "Deadpool",
+      "Doctor Strange",
+      "Black Panther",
+      "Vision",
+      "Scarlet Witch",
+    ];
+
+    let finalName = name.trim();
+    if (type === "guest") {
+      finalName = SUPERHERO_NAMES[Math.floor(Math.random() * SUPERHERO_NAMES.length)];
+    }
+
+    if (!finalName) return;
+
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const newPlayer: RegisteredPlayer = {
+      id: crypto.randomUUID(),
+      name: finalName,
+      code,
+      type,
+      createdAt: new Date().toISOString(),
+    };
+    setRegisteredPlayers((prev) => [...prev, newPlayer]);
+  };
+
+  const deleteRegisteredPlayer = (id: string) => {
+    setRegisteredPlayers((prev) => prev.filter((p) => p.id !== id));
+  };
+
   return {
     config,
     state,
     auth,
     leaderboard,
     matchHistory,
+    registeredPlayers,
+    activeRoster,
+    registerPlayer,
+    deleteRegisteredPlayer,
+    toggleRosterPlayer,
     updateConfig,
     updatePhase,
     assignPlayerTeam,
