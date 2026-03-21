@@ -272,20 +272,22 @@ export default function Home() {
                             ))}
                           </select>
                         </label>
-                        <label className="inline-flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200">
-                          {language === "cs" ? "Friendly Fire" : "Friendly Fire"}
-                          <button
-                            type="button"
-                            onClick={() => updateConfig({ ...config, friendlyFire: !config.friendlyFire })}
-                            className={`h-6 w-12 rounded-full p-1 transition ${
-                              config.friendlyFire ? "bg-[#ff0000]/60" : "bg-[#00ff00]/30"
-                            }`}
-                        >
-                          <span
-                            className={`block h-4 w-4 rounded-full bg-white transition ${config.friendlyFire ? "translate-x-6" : "translate-x-0"}`}
-                          />
-                        </button>
-                      </label>
+                        <div className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                          <div className="mt-5 inline-flex w-full items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200">
+                            <span>{language === "cs" ? "Friendly Fire" : "Friendly Fire"}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateConfig({ ...config, friendlyFire: !config.friendlyFire })}
+                              className={`mt-1 h-3.5 w-12 rounded-full px-1 transition ${
+                                config.friendlyFire ? "bg-[#ff0000]/60" : "bg-[#00ff00]/30"
+                              }`}
+                            >
+                              <span
+                                className={`block h-2 w-4 rounded-full bg-white transition ${config.friendlyFire ? "translate-x-6" : "translate-x-0"}`}
+                              />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </article>
