@@ -1,16 +1,29 @@
 import type { Metadata } from "next";
-import { Orbitron, Rajdhani } from "next/font/google";
+import localFont from "next/font/local";
+import { Noto_Sans } from "next/font/google";
 import "./globals.css";
 
-const headline = Orbitron({
-  variable: "--font-orbitron",
-  subsets: ["latin"],
+const headline = localFont({
+  variable: "--font-goldman",
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/Goldman/Goldman-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/Goldman/Goldman-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
 });
 
-const body = Rajdhani({
-  variable: "--font-rajdhani",
+const body = Noto_Sans({
+  variable: "--font-noto-sans",
+  subsets: ["latin-ext"],
   weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
