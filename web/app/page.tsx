@@ -325,7 +325,6 @@ export default function Home() {
           {state.phase === "results" && (
             <section className="space-y-5">
               <header>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{language === "cs" ? "Fáze 3" : "Phase 3"}</p>
                 <h2 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">{language === "cs" ? "Finální výsledky" : "Final Results"}</h2>
               </header>
 
@@ -345,9 +344,15 @@ export default function Home() {
                   <article key={r.team} className="rounded-xl border border-zinc-800 bg-black/40 p-4 text-zinc-200">
                     <h4 className="text-lg font-semibold">{r.team}</h4>
                     <div className="mt-3 space-y-2 text-sm">
-                      <p>{language === "cs" ? "Skóre" : "Score"}: <span className="text-[#00ff00]">{r.score}</span></p>
-                      <p>Kills: <span className="text-[#00ff00]">{r.kills}</span></p>
-                      <p>Deaths: <span className="text-[#ff0000]">{r.deaths}</span></p>
+                      <p>
+                        {language === "cs" ? "Skóre" : "Score"}: <span className="text-[#ff0000]">{teamResult.score}</span>
+                      </p>
+                      <p>
+                        {language === "cs" ? "Přesnost" : "Accuracy"}: <span className="text-[#00ff00]">{teamResult.accuracy}%</span>
+                      </p>
+                      <p>
+                        {language === "cs" ? "Udělené poškození" : "Damage Dealt"}: <span className="text-[#ff0000]">{teamResult.damageDealt}</span>
+                      </p>
                     </div>
                   </article>
                 ))}
