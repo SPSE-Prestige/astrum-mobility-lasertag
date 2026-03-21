@@ -212,130 +212,109 @@ export default function Home() {
                 {language === "cs" ? "Začít hru" : "Start Game"}
               </button>
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                <article className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
-                  <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
-                    <Settings className="h-4 w-4 text-[#00ff00]" />
-                    {language === "cs" ? "Parametry hry" : "Game Parameters"}
-                  </h3>
-                  <div className="grid gap-3">
-                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      {language === "cs" ? "Název" : "Name"}
-                      <input
-                        value={config.gameName}
-                        onChange={(event) => updateConfig({ ...config, gameName: event.target.value })}
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
-                      />
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
+                <div className="flex flex-col gap-4 self-start">
+                  <article className="self-start rounded-2xl border border-zinc-800 bg-black/40 px-3 py-2 pb-1">
+                    <h3 className="mb-2 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
+                      <Settings className="h-4 w-4 text-[#00ff00]" />
+                      {language === "cs" ? "Parametry hry" : "Game Parameters"}
+                    </h3>
+                    <div className="grid gap-0.5">
                       <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                        {language === "cs" ? "Délka (min)" : "Duration (min)"}
+                        {language === "cs" ? "Název" : "Name"}
                         <input
-                          type="number"
-                          min={5}
-                          value={config.durationMinutes}
-                          onChange={(event) => updateConfig({ ...config, durationMinutes: Number(event.target.value) })}
-                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
+                          value={config.gameName}
+                          onChange={(event) => updateConfig({ ...config, gameName: event.target.value })}
+                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
                         />
                       </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                          {language === "cs" ? "Délka (min)" : "Duration (min)"}
+                          <input
+                            type="number"
+                            min={5}
+                            value={config.durationMinutes}
+                            onChange={(event) => updateConfig({ ...config, durationMinutes: Number(event.target.value) })}
+                            className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
+                          />
+                        </label>
+                        <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                          {language === "cs" ? "Herní režim" : "Game Mode"}
+                          <select
+                            value={config.gameMode}
+                            onChange={(event) =>
+                              updateConfig({
+                                ...config,
+                                gameMode: event.target.value as "team" | "ffa",
+                              })
+                            }
+                            className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
+                          >
+                            <option value="team">{language === "cs" ? "Týmová hra" : "Team Game"}</option>
+                            <option value="ffa">{language === "cs" ? "Každý proti každému" : "Free For All"}</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                          {language === "cs" ? "Týmy" : "Teams"}
+                          <select
+                            value={config.teamsCount}
+                            onChange={(event) => updateConfig({ ...config, teamsCount: Number(event.target.value) })}
+                            disabled={config.gameMode === "ffa"}
+                            className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
+                          >
+                            {[2, 3, 4].map((teamCount) => (
+                              <option key={teamCount} value={teamCount}>
+                                {teamCount}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="inline-flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200">
+                          {language === "cs" ? "Friendly Fire" : "Friendly Fire"}
+                          <button
+                            type="button"
+                            onClick={() => updateConfig({ ...config, friendlyFire: !config.friendlyFire })}
+                            className={`h-6 w-12 rounded-full p-1 transition ${
+                              config.friendlyFire ? "bg-[#ff0000]/60" : "bg-[#00ff00]/30"
+                            }`}
+                        >
+                          <span
+                            className={`block h-4 w-4 rounded-full bg-white transition ${config.friendlyFire ? "translate-x-6" : "translate-x-0"}`}
+                          />
+                        </button>
+                      </label>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article className="self-start rounded-2xl border border-zinc-800 bg-black/40 p-4">
+                    <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
+                      <SlidersHorizontal className="h-4 w-4 text-[#ff0000]" />
+                      {language === "cs" ? "Dodatečná nastavení" : "Additional Settings"}
+                    </h3>
+                    <div className="grid gap-3">
                       <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                        {language === "cs" ? "Herní režim" : "Game Mode"}
-                        <select
-                          value={config.gameMode}
+                        {language === "cs" ? "Prodleva respawnu" : "Respawn Delay"}
+                        <input
+                          type="number"
+                          value={config.playerTuning.respawnDelay}
                           onChange={(event) =>
                             updateConfig({
                               ...config,
-                              gameMode: event.target.value as "team" | "ffa",
+                              playerTuning: { ...config.playerTuning, respawnDelay: Number(event.target.value) },
                             })
                           }
-                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
-                        >
-                          <option value="team">{language === "cs" ? "Týmová hra" : "Team Game"}</option>
-                          <option value="ffa">{language === "cs" ? "Každý proti každému" : "Free For All"}</option>
-                        </select>
-                      </label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                        {language === "cs" ? "Týmy" : "Teams"}
-                        <select
-                          value={config.teamsCount}
-                          onChange={(event) => updateConfig({ ...config, teamsCount: Number(event.target.value) })}
-                          disabled={config.gameMode === "ffa"}
-                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-[#00ff00] transition focus:ring-1"
-                        >
-                          {[2, 3, 4].map((teamCount) => (
-                            <option key={teamCount} value={teamCount}>
-                              {teamCount}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
-                        {config.gameMode === "ffa"
-                          ? language === "cs"
-                            ? "V režimu FFA se týmy nepoužívají."
-                            : "Teams are not used in FFA mode."
-                          : language === "cs"
-                            ? "V týmovém režimu lze přiřadit vozíky do týmu."
-                            : "In team mode, karts can be assigned to teams."}
-                      </div>
-                    </div>
-                    <label className="mt-1 inline-flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200">
-                      {language === "cs" ? "Friendly Fire" : "Friendly Fire"}
-                      <button
-                        type="button"
-                        onClick={() => updateConfig({ ...config, friendlyFire: !config.friendlyFire })}
-                        className={`h-6 w-12 rounded-full p-1 transition ${
-                          config.friendlyFire ? "bg-[#ff0000]/60" : "bg-[#00ff00]/30"
-                        }`}
-                      >
-                        <span
-                          className={`block h-4 w-4 rounded-full bg-white transition ${config.friendlyFire ? "translate-x-6" : "translate-x-0"}`}
+                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
                         />
-                      </button>
-                    </label>
-                  </div>
-                </article>
+                      </label>
+                    </div>
+                  </article>
+                </div>
 
-                <article className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
-                  <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
-                    <SlidersHorizontal className="h-4 w-4 text-[#ff0000]" />
-                    {language === "cs" ? "Ladění hráčů a vozíku" : "Player & Cart Tuning"}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      {language === "cs" ? "Prodleva respawnu" : "Respawn Delay"}
-                      <input
-                        type="number"
-                        value={config.playerTuning.respawnDelay}
-                        onChange={(event) =>
-                          updateConfig({
-                            ...config,
-                            playerTuning: { ...config.playerTuning, respawnDelay: Number(event.target.value) },
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-                      />
-                    </label>
-                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
-                      {language === "cs" ? "Rychlost vozíku" : "Cart Speed"}
-                      <input
-                        type="number"
-                        value={config.playerTuning.cartSpeed}
-                        onChange={(event) =>
-                          updateConfig({
-                            ...config,
-                            playerTuning: { ...config.playerTuning, cartSpeed: Number(event.target.value) },
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-                      />
-                    </label>
-                  </div>
-                </article>
-
-                <article className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+                <article className="self-start rounded-2xl border border-zinc-800 bg-black/40 p-4">
                   <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
                     <Users className="h-4 w-4 text-[#00ff00]" />
                     {language === "cs" ? "Přiřazení hráčů do týmů" : "Assign Players to Teams"}
@@ -348,7 +327,7 @@ export default function Home() {
                         : "In 'Free For All' mode, teams are not used."}
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {Array.from({ length: config.teamsCount }).map((_, teamIdx) => {
                         const teams = ["Neon Green", "Neon Red", "Neon Blue", "Neon Yellow"];
                         const teamName = teams[teamIdx] || `Team ${teamIdx + 1}`;
@@ -381,6 +360,7 @@ export default function Home() {
                     </div>
                   )}
                 </article>
+
               </div>
             </section>
           )}

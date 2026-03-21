@@ -51,7 +51,6 @@ export const PhaseSidebar = ({ phase, language, raceStatus, onPhaseChange }: Pha
   return (
     <aside className="w-full rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)] backdrop-blur md:w-72">
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{language === "cs" ? "Řízení závodu" : "Race Control"}</p>
         <h2 className="mt-2 text-2xl font-semibold text-zinc-100">{language === "cs" ? "Lasertag" : "Lasertag"}</h2>
       </div>
 
