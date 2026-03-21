@@ -1,5 +1,13 @@
-export type GamePhase = "setup" | "live" | "results";
+export type GamePhase = "setup" | "live" | "results" | "players";
 export type GameMode = "team" | "ffa";
+
+export interface RegisteredPlayer {
+  id: string;
+  name: string;
+  code: string;
+  type: "guest" | "registered";
+  createdAt: string;
+}
 
 export interface GameConfig {
   gameName: string;
@@ -15,6 +23,7 @@ export interface GameConfig {
   playerTuning: {
     hp: number;
     respawnDelay: number;
+    cartSpeed: number;
   };
 }
 

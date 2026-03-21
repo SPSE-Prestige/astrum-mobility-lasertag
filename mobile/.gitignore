@@ -1,13 +1,38 @@
+<<<<<<< HEAD
 # Expo
 .expo
 .expo-shared
 dist
 npm-debug.*
+=======
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production
+dist/
+web-build/
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo
+.expo/
+>>>>>>> web
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+<<<<<<< HEAD
 *.orig.*
 web-build/
 
@@ -31,3 +56,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+=======
+
+# Native
+android/
+ios/
+>>>>>>> web

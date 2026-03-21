@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag, Gauge, Settings2 } from "lucide-react";
+import { Flag, Gauge, Settings2, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { GamePhase } from "@/types/game";
 import type { Language } from "@/types/i18n";
@@ -14,39 +14,43 @@ interface PhaseSidebarProps {
 
 const phases: Array<{ key: GamePhase; label: Record<Language, string>; icon: LucideIcon }> = [
   { key: "setup", label: { cs: "Nastavení", en: "Setup" }, icon: Settings2 },
+  { key: "players", label: { cs: "Hráči", en: "Players" }, icon: Users },
   { key: "live", label: { cs: "Závod", en: "Race" }, icon: Gauge },
   { key: "results", label: { cs: "Výsledky", en: "Results" }, icon: Flag },
 ];
 
 export const PhaseSidebar = ({ phase, language, raceStatus, onPhaseChange }: PhaseSidebarProps) => {
   const canNavigateTo = (targetPhase: GamePhase): boolean => {
-    // Během běhu závodu se nemůže přepnout nikam
-    if (phase === "live" && raceStatus === "running") {
-      return false;
+    // Always allow clicking the active phase (mainly for UI consistency)
+    if (targetPhase === phase) return true;
+
+    // Rule: Players card is only accessible from Setup and Results
+    // & From Players card, only Setup and Results are accessible
+    if (phase === "players") {
+      return targetPhase === "setup" || targetPhase === "results";
+    }
+    if (targetPhase === "players") {
+      return phase === "setup" || phase === "results";
     }
 
-    // Do závodu se jde jen z nastavení a jen když se spustí hra
+    // If the race is running, prevent navigation elsewhere (Live is locked)
+    // Note: Navigation to 'players' is already restricted above based on phase expectations
+    if (raceStatus === "running") {
+      return targetPhase === "live";
+    }
+
+    // Do závodu se jde jen z nastavení a jen když se spustí hra (tlačítkem Start, ne v menu)
     if (targetPhase === "live") {
       return false;
     }
 
-    // Mezi Setup a Results se jde volně
-    if ((phase === "setup" && targetPhase === "results") || (phase === "results" && targetPhase === "setup")) {
-      return true;
-    }
-
-    // Zůstat na stejné fázi
-    if (targetPhase === phase) {
-      return true;
-    }
-
-    return false;
+    // Can navigate to anything else (Setup, Results)
+    return true;
   };
 
   return (
     <aside className="w-full rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)] backdrop-blur md:w-72">
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{language === "cs" ? "Řízení závodu" : "Race Control"}</p>
         <h2 className="mt-2 text-2xl font-semibold text-zinc-100">{language === "cs" ? "Lasertag" : "Lasertag"}</h2>
       </div>
 
