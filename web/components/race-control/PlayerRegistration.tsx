@@ -1,234 +1,210 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Plus, Trash2, UserPlus, Users, User, Zap } from "lucide-react";
-import type { GameMode, Player, RegisteredPlayer } from "@/types/game";
+import { Cpu, Play, Plus, RefreshCw, Trash2, Users } from "lucide-react";
+import type { Device, GameMode, Player, Team } from "@/types/game";
 import type { Language } from "@/types/i18n";
 
 interface PlayerRegistrationProps {
-  activePlayers: Player[];
-  registeredPlayers: RegisteredPlayer[];
-  activeRoster: string[];
+  players: Player[];
+  devices: Device[];
+  teams: Team[];
   gameMode: GameMode;
   language: Language;
-  onRegister: (name: string, type?: "guest" | "registered") => void;
-  onDeleteRegistry: (id: string) => void;
-  onToggleRoster: (playerId: string) => void;
+  onAddPlayer: (deviceId: string, nickname: string, teamId?: string) => Promise<void>;
+  onRemovePlayer: (playerId: string) => Promise<void>;
+  onAssignTeam: (playerId: string, teamId: string | null) => Promise<void>;
+  onRefreshDevices: () => Promise<void>;
+  onStartGame: () => Promise<void>;
 }
 
 export const PlayerRegistration = ({
-  activePlayers = [],
-  registeredPlayers = [],
-  activeRoster = [],
+  players,
+  devices,
+  teams,
   gameMode,
   language,
-  onRegister,
-  onDeleteRegistry,
-  onToggleRoster,
+  onAddPlayer,
+  onRemovePlayer,
+  onAssignTeam,
+  onRefreshDevices,
+  onStartGame,
 }: PlayerRegistrationProps) => {
-  const [newName, setNewName] = useState("");
-  const [registrationMode, setRegistrationMode] = useState<"registered" | "guest">("registered");
+  const [nickname, setNickname] = useState("");
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (registrationMode === "registered") {
-      if (!newName.trim()) return;
-      onRegister(newName.trim(), "registered");
-      setNewName("");
-    } else {
-      onRegister("", "guest");
+    if (!nickname.trim() || !selectedDevice) return;
+    setLoading(true);
+    try {
+      await onAddPlayer(selectedDevice, nickname.trim(), selectedTeam || undefined);
+      setNickname("");
+      setSelectedDevice("");
+      setSelectedTeam("");
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
   };
 
   return (
     <section className="space-y-6">
-      <header>
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-          {language === "cs" ? "Správa hráčů" : "Player Management"}
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">
-          {language === "cs" ? "Hráči a Lobby" : "Players & Lobby"}
-        </h1>
+      <header className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            {language === "cs" ? "Fáze 2" : "Phase 2"}
+          </p>
+          <h1 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">
+            {language === "cs" ? "Hráči a Lobby" : "Players & Lobby"}
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={onStartGame}
+          disabled={players.length < 2}
+          className="rounded-xl border-2 border-[#00ff00] bg-[#00ff00]/20 px-6 py-3 text-lg font-semibold uppercase tracking-[0.16em] text-[#00ff00] shadow-[0_0_20px_rgba(0,255,0,0.3)] transition hover:bg-[#00ff00]/30 hover:shadow-[0_0_30px_rgba(0,255,0,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Play className="mr-2 inline h-5 w-5" />
+          {language === "cs" ? "Spustit hru" : "Start Game"}
+        </button>
       </header>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        {/* Registration Section */}
+        {/* Add Player */}
         <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
           <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
-            <UserPlus className="h-4 w-4 text-zinc-200" />
-            {language === "cs" ? "Registrace nových hráčů" : "Player Registration"}
+            <Plus className="h-4 w-4 text-[#00ff00]" />
+            {language === "cs" ? "Přidat hráče" : "Add Player"}
           </h3>
 
-          <div className="mb-4 flex w-full rounded-lg bg-zinc-900/50 p-1">
-            <button
-              onClick={() => setRegistrationMode("registered")}
-              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition ${
-                registrationMode === "registered"
-                  ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <span className="flex items-center justify-center gap-2">
-                <User className="h-3.5 w-3.5" />
-                {language === "cs" ? "Registrace" : "Standard"}
-              </span>
-            </button>
-            <button
-              onClick={() => setRegistrationMode("guest")}
-              className={`flex-1 rounded-md py-1.5 text-xs font-medium transition ${
-                registrationMode === "guest"
-                  ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <span className="flex items-center justify-center gap-2">
-                <Zap className="h-3.5 w-3.5" />
-                {language === "cs" ? "Host (Superhrdina)" : "Guest (Superhero)"}
-              </span>
-            </button>
-          </div>
+          <form onSubmit={handleAdd} className="space-y-3">
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder={language === "cs" ? "Přezdívka hráče" : "Player Nickname"}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 text-zinc-100 placeholder-zinc-600 focus:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-700"
+            />
 
-          <form onSubmit={handleRegister} className="flex gap-3">
-            {registrationMode === "registered" ? (
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={language === "cs" ? "Jméno hráče" : "Player Name"}
-                className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 text-zinc-100 placeholder-zinc-600 focus:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-700"
-              />
-            ) : (
-              <div className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900/40 px-4 py-2 text-sm text-zinc-500 italic flex items-center">
-                {language === "cs"
-                  ? "Bude vygenerována přezdívka superhrdiny"
-                  : "Superhero nickname will be generated"}
-              </div>
+            <div className="flex items-end gap-2">
+              <label className="flex-1 text-xs uppercase tracking-[0.14em] text-zinc-500">
+                {language === "cs" ? "Zařízení" : "Device"}
+                <select
+                  value={selectedDevice}
+                  onChange={(e) => setSelectedDevice(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-700"
+                >
+                  <option value="">{language === "cs" ? "Vyberte zařízení" : "Select device"}</option>
+                  {devices.map((d) => (
+                    <option key={d.id} value={d.deviceId}>
+                      {d.deviceId} ({d.status})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={onRefreshDevices}
+                className="mb-0.5 rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                title={language === "cs" ? "Obnovit zařízení" : "Refresh devices"}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
+
+            {gameMode === "team" && teams.length > 0 && (
+              <label className="block text-xs uppercase tracking-[0.14em] text-zinc-500">
+                {language === "cs" ? "Tým" : "Team"}
+                <select
+                  value={selectedTeam}
+                  onChange={(e) => setSelectedTeam(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-700"
+                >
+                  <option value="">{language === "cs" ? "Bez týmu" : "No team"}</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
+
             <button
               type="submit"
-              disabled={registrationMode === "registered" && !newName.trim()}
-              className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 font-medium text-zinc-950 hover:bg-zinc-300 disabled:opacity-50 transition-all active:scale-95"
+              disabled={!nickname.trim() || !selectedDevice || loading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 font-medium text-zinc-950 hover:bg-zinc-300 disabled:opacity-50 transition-all active:scale-95"
             >
               <Plus className="h-4 w-4" />
-              {language === "cs" ? "Přidat" : "Add"}
+              {language === "cs" ? "Přidat do hry" : "Add to Game"}
             </button>
           </form>
+
+          {devices.length === 0 && (
+            <p className="mt-3 text-xs text-zinc-500 italic">
+              {language === "cs"
+                ? "Žádná dostupná zařízení. Zapněte M5Stack jednotky."
+                : "No available devices. Power on M5Stack units."}
+            </p>
+          )}
         </div>
 
-        {/* Lobby Section */}
+        {/* Current Players */}
         <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
           <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
             <Users className="h-4 w-4 text-zinc-200" />
-            {language === "cs" ? "Lobby aktivních hráčů" : "Active Players Lobby"}
+            {language === "cs" ? `Hráči ve hře (${players.length})` : `Players in Game (${players.length})`}
           </h3>
-          <div className="space-y-2 max-h-55 overflow-y-auto pr-2 custom-scrollbar">
-             {!activePlayers.length && (
-                 <div className="flex h-32 flex-col items-center justify-center border-2 border-dashed border-zinc-800/50 rounded-lg text-zinc-600">
-                     <p className="text-xs italic">
-                         {language === "cs" ? "Lobby je prázdné" : "Lobby empty"}
-                     </p>
-                 </div>
-             )}
-             {activePlayers.map((player) => (
-                <div key={player.id} className="group flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm hover:border-zinc-700 transition-colors">
-                    <div className="flex items-center gap-3">
-                        <div className={`h-2 w-2 rounded-full ${player.cartConnected ? "bg-green-500" : "bg-red-500"}`} />
-                        <span className="font-medium text-zinc-200">{player.name}</span>
-                    </div>
-                    
-                    <button 
-                        onClick={() => onToggleRoster(player.id)} 
-                        className="flex h-7 w-7 items-center justify-center rounded border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-red-900/50 hover:bg-red-900/10 hover:text-red-400 transition-colors"
-                        title={language === "cs" ? "Odebrat z lobby" : "Remove from lobby"}
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                </div>
-             ))}
-          </div>
-        </div>
-      </div>
 
-      {/* Registered Players List */}
-      <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
-        <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
-          <Users className="h-4 w-4 text-zinc-200" />
-          {language === "cs" ? "Seznam registrovaných hráčů" : "Registered Players List"}
-        </h3>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {registeredPlayers.map((player) => {
-            const isActive = activeRoster.includes(player.id);
-            return (
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+            {players.length === 0 && (
+              <div className="flex h-32 flex-col items-center justify-center border-2 border-dashed border-zinc-800/50 rounded-lg text-zinc-600">
+                <Cpu className="mb-2 h-6 w-6 opacity-30" />
+                <p className="text-xs italic">
+                  {language === "cs" ? "Zatím žádní hráči" : "No players yet"}
+                </p>
+              </div>
+            )}
+            {players.map((player) => (
               <div
                 key={player.id}
-                onClick={() => onToggleRoster(player.id)}
-                className={`group relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 transition-all active:scale-[0.98] ${
-                  isActive
-                    ? "border-[#00ff00] bg-[#00ff00]/5 ring-1 ring-[#00ff00] shadow-[0_0_15px_rgba(0,255,0,0.1)]"
-                    : "border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900/60 hover:border-zinc-700"
-                }`}
+                className="group flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm hover:border-zinc-700 transition-colors"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <p className={`font-semibold ${isActive ? "text-[#00ff00]" : "text-zinc-100"}`}>{player.name}</p>
-                        {player.type === "guest" && (
-                            <span className="rounded border border-yellow-500/20 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-yellow-500">
-                                {language === "cs" ? "Host" : "Guest"}
-                            </span>
-                        )}
-                         {player.type === "registered" && (
-                            <span className="rounded border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-500">
-                                {language === "cs" ? "Reg" : "Reg"}
-                            </span>
-                        )}
-                    </div>
-                    <p className="mt-1 text-[10px] text-zinc-600 uppercase tracking-widest">
-                        {new Date(player.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    <span className="font-medium text-zinc-200">{player.name}</span>
+                    <span className="ml-2 text-xs text-zinc-500">{player.deviceId}</span>
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {gameMode === "team" && (
+                    <select
+                      value={player.teamId ?? ""}
+                      onChange={(e) => onAssignTeam(player.id, e.target.value || null)}
+                      className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
+                    >
+                      <option value="">{language === "cs" ? "Bez týmu" : "No team"}</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteRegistry(player.id);
-                    }}
-                    className="rounded p-1.5 text-zinc-600 opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                    onClick={() => onRemovePlayer(player.id)}
+                    className="flex h-7 w-7 items-center justify-center rounded border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-red-900/50 hover:bg-red-900/10 hover:text-red-400 transition-colors"
+                    title={language === "cs" ? "Odebrat hráče" : "Remove player"}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-
-                <div className="mt-auto flex items-center justify-between rounded-lg border border-zinc-800/50 bg-black/40 px-3 py-2">
-                  <span className="text-[10px] font-bold tracking-widest text-zinc-600">CODE</span>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-xl font-bold tracking-[0.2em] text-[#00ff00]">{player.code}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyCode(player.code);
-                      }}
-                      className="text-zinc-600 hover:text-zinc-300 transition-colors"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
               </div>
-            );
-          })}
-
-          {registeredPlayers.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-zinc-600 border-2 border-dashed border-zinc-800/50 rounded-xl">
-              <Users className="mb-2 h-8 w-8 opacity-20" />
-              <p>{language === "cs" ? "Zatím žádní registrovaní hráči" : "No registered players yet"}</p>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </div>
     </section>

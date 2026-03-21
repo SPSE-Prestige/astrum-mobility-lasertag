@@ -101,19 +101,24 @@ services:
   web:
     build:
       context: ../../web
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: dev
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8080
       - NODE_ENV=development
+      - HOSTNAME=0.0.0.0
+    tty: true
+    stdin_open: true
     depends_on:
       backend:
         condition: service_started
+    restart: unless-stopped
     volumes:
       - ../../web:/app
       - web_node_modules:/app/node_modules
-      - web_next:/app/.next
+      - /app/.next
     networks:
       - lasertag
 
@@ -122,7 +127,6 @@ volumes:
   redisdata:
   mosquittodata:
   web_node_modules:
-  web_next:
 
 networks:
   lasertag:

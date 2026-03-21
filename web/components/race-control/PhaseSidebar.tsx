@@ -8,7 +8,7 @@ import type { Language } from "@/types/i18n";
 interface PhaseSidebarProps {
   phase: GamePhase;
   language: Language;
-  raceStatus: "idle" | "running" | "paused" | "finished";
+  raceStatus: "idle" | "running" | "finished";
   onPhaseChange: (phase: GamePhase) => void;
 }
 
@@ -86,8 +86,8 @@ export const PhaseSidebar = ({ phase, language, raceStatus, onPhaseChange }: Pha
             ? "Závod probíhá. Nelze přejít na jinou sekci."
             : "Race in progress. Cannot switch sections."
           : language === "cs"
-            ? "Připraveno na mock real-time stream."
-            : "Prepared for mock real-time stream."}
+            ? "Připraveno na real-time stream."
+            : "Ready for real-time stream."}
       </div>
     </aside>
   );

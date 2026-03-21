@@ -1,568 +1,442 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { AuthState, GameConfig, GameMode, GamePhase, GameState, MatchHistoryItem, Player, RegisteredPlayer } from "@/types/game";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  AuthState,
+  Device,
+  GameConfig,
+  GameMode,
+  GamePhase,
+  GameState,
+  KillFeedEvent,
+  MatchHistoryItem,
+  Player,
+  Team,
+  TeamResult,
+} from "@/types/game";
+import {
+  api,
+  type EventResponse,
+  type PlayerResponse,
+  type TeamResponse,
+} from "@/lib/api";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
-const initialConfig: GameConfig = {
-  gameName: "Aimtec Night Grand Prix",
-  durationMinutes: 12,
+const TOKEN_KEY = "lasertag-token";
+const USER_KEY = "lasertag-user";
+
+const defaultConfig: GameConfig = {
+  gameName: "Laser Tag Game",
+  durationMinutes: 5,
   teamsCount: 2,
   gameMode: "team",
   friendlyFire: false,
-  weaponTuning: {
-    damage: 24,
-    fireRate: 6,
-    reloadTime: 2,
-  },
-  playerTuning: {
-    hp: 100,
-    respawnDelay: 4,
-    cartSpeed: 28,
-  },
+  respawnDelay: 5,
+  maxPlayers: 20,
 };
-
-const initialPlayers: Player[] = [
-  {
-    id: "p1",
-    name: "Rider 01",
-    team: "Neon Green",
-    hp: 100,
-    ammo: 36,
-    status: "active",
-    kills: 2,
-    hits: 9,
-    accuracy: 56,
-    damageDealt: 220,
-    cartConnected: true,
-  },
-  {
-    id: "p2",
-    name: "Rider 02",
-    team: "Neon Red",
-    hp: 90,
-    ammo: 29,
-    status: "active",
-    kills: 3,
-    hits: 11,
-    accuracy: 62,
-    damageDealt: 265,
-    cartConnected: true,
-  },
-  {
-    id: "p3",
-    name: "Rider 03",
-    team: "Neon Green",
-    hp: 70,
-    ammo: 16,
-    status: "stunned",
-    kills: 1,
-    hits: 7,
-    accuracy: 40,
-    damageDealt: 155,
-    cartConnected: true,
-  },
-  {
-    id: "p4",
-    name: "Rider 04",
-    team: "Unassigned",
-    hp: 100,
-    ammo: 40,
-    status: "active",
-    kills: 0,
-    hits: 2,
-    accuracy: 20,
-    damageDealt: 40,
-    cartConnected: false,
-  },
-];
 
 const initialState: GameState = {
   phase: "setup",
-  raceTimeSeconds: initialConfig.durationMinutes * 60,
+  gameId: null,
+  raceTimeSeconds: defaultConfig.durationMinutes * 60,
   raceStatus: "idle",
-  players: initialPlayers,
-  killFeed: [
-    {
-      id: "k1",
-      timestamp: "00:00",
-      message: "event.systemReady",
-    },
-  ],
-  teamResults: [
-    {
-      team: "Neon Green",
-      score: 0,
-      accuracy: 0,
-      damageDealt: 0,
-    },
-    {
-      team: "Neon Red",
-      score: 0,
-      accuracy: 0,
-      damageDealt: 0,
-    },
-  ],
+  players: [],
+  teams: [],
+  devices: [],
+  killFeed: [],
+  teamResults: [],
 };
 
-const HISTORY_STORAGE_KEY = "race-control-history";
-const PLAYERS_STORAGE_KEY = "race-control-registered-players";
-
-const initialAuthState: AuthState = {
+const initialAuth: AuthState = {
   isAuthenticated: false,
   username: null,
+  token: null,
   error: null,
 };
 
-const seedMatchHistory: MatchHistoryItem[] = [
-  {
-    id: "m1",
-    gameName: "Friday Neon Sprint",
-    gameMode: "team",
-    playedAt: "2026-03-20T18:30:00.000Z",
-    durationMinutes: 10,
-    winner: "Neon Green",
-    totalKills: 18,
-  },
-  {
-    id: "m2",
-    gameName: "Solo Chaos Run",
-    gameMode: "ffa",
-    playedAt: "2026-03-20T20:00:00.000Z",
-    durationMinutes: 8,
-    winner: "Rider 02",
-    totalKills: 14,
-  },
-];
+// ── Helpers ──
 
-const calculateTeamResults = (players: Player[], mode: GameMode) => {
+function toPlayer(p: PlayerResponse, teams: TeamResponse[]): Player {
+  const team = teams.find((t) => t.id === p.team_id);
+  return {
+    id: p.id,
+    name: p.nickname,
+    team: team?.name ?? "Unassigned",
+    teamId: p.team_id ?? null,
+    deviceId: p.device_id,
+    status: p.is_alive ? "alive" : "dead",
+    kills: p.kills,
+    deaths: p.deaths,
+    score: p.score,
+  };
+}
+
+function toTeam(t: TeamResponse): Team {
+  return { id: t.id, name: t.name, color: t.color };
+}
+
+function toDevice(d: { id: string; device_id: string; status: string; last_seen: string }): Device {
+  return { id: d.id, deviceId: d.device_id, status: d.status, lastSeen: d.last_seen };
+}
+
+function buildKillFeed(events: EventResponse[]): KillFeedEvent[] {
+  return events
+    .filter((e) => e.type === "kill")
+    .reverse()
+    .slice(0, 20)
+    .map((e) => ({
+      id: e.id,
+      timestamp: new Date(e.timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+      message: `${(e.payload?.attacker_nickname as string) ?? "?"} → ${(e.payload?.victim_nickname as string) ?? "?"}`,
+    }));
+}
+
+function calcTeamResults(players: Player[], mode: GameMode): TeamResult[] {
   if (mode === "ffa") {
     return players
-      .filter((player) => player.cartConnected)
-      .map((player) => ({
-        team: player.name,
-        score: player.kills * 10 + player.hits,
-        accuracy: player.accuracy,
-        damageDealt: player.damageDealt,
-      }))
+      .map((p) => ({ team: p.name, score: p.score, kills: p.kills, deaths: p.deaths }))
       .sort((a, b) => b.score - a.score);
   }
-
   const grouped = players
-    .filter((player) => player.team !== "Unassigned")
-    .reduce<Record<string, { kills: number; hits: number; damage: number; accuracySum: number; count: number }>>(
-      (acc, player) => {
-        if (!acc[player.team]) {
-          acc[player.team] = { kills: 0, hits: 0, damage: 0, accuracySum: 0, count: 0 };
-        }
-
-        acc[player.team].kills += player.kills;
-        acc[player.team].hits += player.hits;
-        acc[player.team].damage += player.damageDealt;
-        acc[player.team].accuracySum += player.accuracy;
-        acc[player.team].count += 1;
-        return acc;
-      },
-      {},
-    );
-
+    .filter((p) => p.team !== "Unassigned")
+    .reduce<Record<string, { score: number; kills: number; deaths: number }>>((acc, p) => {
+      if (!acc[p.team]) acc[p.team] = { score: 0, kills: 0, deaths: 0 };
+      acc[p.team].score += p.score;
+      acc[p.team].kills += p.kills;
+      acc[p.team].deaths += p.deaths;
+      return acc;
+    }, {});
   return Object.entries(grouped)
-    .map(([team, metrics]) => ({
-      team,
-      score: metrics.kills * 10 + metrics.hits,
-      accuracy: metrics.count > 0 ? Math.round(metrics.accuracySum / metrics.count) : 0,
-      damageDealt: metrics.damage,
-    }))
+    .map(([team, s]) => ({ team, ...s }))
     .sort((a, b) => b.score - a.score);
-};
-
-const resolveWinner = (players: Player[], mode: GameMode): string => {
-  if (mode === "ffa") {
-    const bestPlayer = [...players].sort((a, b) => b.kills - a.kills || b.hits - a.hits)[0];
-    return bestPlayer?.name ?? "Unknown";
-  }
-
-  const teamResults = calculateTeamResults(players, mode);
-  return teamResults[0]?.team ?? "Unknown";
-};
-
-const totalKills = (players: Player[]): number => players.reduce((sum, player) => sum + player.kills, 0);
+}
 
 const formatRaceTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60)
-    .toString()
-    .padStart(2, "0");
-  const secs = Math.max(seconds % 60, 0)
-    .toString()
-    .padStart(2, "0");
-  return `${mins}:${secs}`;
+  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const s = Math.max(seconds % 60, 0).toString().padStart(2, "0");
+  return `${m}:${s}`;
 };
 
+// ── Hook ──
+
 export const useGameData = () => {
-  const [config, setConfig] = useState<GameConfig>(initialConfig);
+  const [config, setConfig] = useState<GameConfig>(defaultConfig);
   const [state, setState] = useState<GameState>(initialState);
-  const [auth, setAuth] = useState<AuthState>(initialAuthState);
-  const [matchHistory, setMatchHistory] = useState<MatchHistoryItem[]>(() => {
-    if (typeof window === "undefined") {
-      return seedMatchHistory;
+  const [matchHistory, setMatchHistory] = useState<MatchHistoryItem[]>([]);
+  const [auth, setAuth] = useState<AuthState>(() => {
+    if (typeof window === "undefined") return initialAuth;
+    const token = localStorage.getItem(TOKEN_KEY);
+    const username = localStorage.getItem(USER_KEY);
+    if (token && username) {
+      api.setToken(token);
+      return { isAuthenticated: true, username, token, error: null };
     }
-
-    const stored = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (!stored) {
-      return seedMatchHistory;
-    }
-
-    try {
-      const parsed = JSON.parse(stored) as MatchHistoryItem[];
-      return parsed.length > 0 ? parsed : seedMatchHistory;
-    } catch {
-      return seedMatchHistory;
-    }
+    return initialAuth;
   });
 
-  const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
+  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
-    const stored = window.localStorage.getItem(PLAYERS_STORAGE_KEY);
-    if (!stored) {
-      return [];
+  // Persist auth token
+  useEffect(() => {
+    if (auth.token) {
+      localStorage.setItem(TOKEN_KEY, auth.token);
+      localStorage.setItem(USER_KEY, auth.username ?? "");
+      api.setToken(auth.token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      api.setToken(null);
     }
+  }, [auth.token, auth.username]);
 
+  // ── Polling during live phase ──
+
+  const pollGameState = useCallback(async () => {
+    const gameId = state.gameId;
+    if (!gameId) return;
     try {
-      return JSON.parse(stored) as RegisteredPlayer[];
-    } catch {
-      return [];
-    }
-  });
+      const full = await api.getGameFull(gameId);
+      const players = full.players.map((p) => toPlayer(p, full.teams));
+      const teams = full.teams.map(toTeam);
+      const killFeed = buildKillFeed(full.events);
+      const teamResults = calcTeamResults(players, config.gameMode);
 
-  const [activeRoster, setActiveRoster] = useState<string[]>([]);
-  // We want to persist this roster or load from current players on init maybe?
-  // For now, let's keep it simple.
-
-  useEffect(() => {
-    localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(registeredPlayers));
-  }, [registeredPlayers]);
-
-  const toggleRosterPlayer = (playerId: string) => {
-    setActiveRoster((prev) => {
-      const next = prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId];
-      return next;
-    });
-  };
-
-  // Sync state.players with activeRoster
-  useEffect(() => {
-    // Only update players list if we are in setup or players management phase
-    if (state.phase !== "setup" && state.phase !== "players") return;
-
-    if (activeRoster.length === 0) {
-      // If roster cleared, maybe we don't want to show empty list? Or maybe we do.
-      // Let's allow empty list for now.
-      if (state.players.length > 0 && state.players.every((p) => registeredPlayers.some((rp) => rp.id === p.id))) {
-         setState((prev) => ({ ...prev, players: [] }));
+      if (full.game.status === "finished") {
+        clearInterval(pollRef.current);
+        setState((prev) => ({
+          ...prev,
+          phase: "results",
+          raceStatus: "finished",
+          players,
+          teams,
+          killFeed,
+          teamResults,
+        }));
+        return;
       }
+
+      let raceTimeSeconds = config.durationMinutes * 60;
+      if (full.game.started_at && full.game.settings.game_duration > 0) {
+        const elapsed = (Date.now() - new Date(full.game.started_at).getTime()) / 1000;
+        raceTimeSeconds = Math.max(0, full.game.settings.game_duration - Math.floor(elapsed));
+      }
+
+      setState((prev) => ({
+        ...prev,
+        raceTimeSeconds,
+        players,
+        teams,
+        killFeed,
+        teamResults,
+      }));
+    } catch (err) {
+      console.error("[Poll]", err);
+    }
+  }, [state.gameId, config.gameMode, config.durationMinutes]);
+
+  useEffect(() => {
+    if (state.phase !== "live" || !state.gameId) {
+      clearInterval(pollRef.current);
       return;
     }
+    pollGameState();
+    pollRef.current = setInterval(pollGameState, 2000);
+    return () => clearInterval(pollRef.current);
+  }, [state.phase, state.gameId, pollGameState]);
 
-    const currentPlayersMap = new Map(state.players.map((p) => [p.id, p]));
+  // WebSocket — triggers immediate poll on events
+  useWebSocket(
+    state.phase === "live" && state.raceStatus === "running",
+    state.gameId,
+    useCallback(() => {
+      pollGameState();
+    }, [pollGameState]),
+  );
 
-    const newPlayersList = activeRoster
-      .map((rosterId) => {
-        const registered = registeredPlayers.find((rp) => rp.id === rosterId);
-        if (!registered) return null;
-
-        const existing = currentPlayersMap.get(rosterId);
-        if (existing) return existing;
-
-        return {
-          id: registered.id,
-          name: registered.name,
-          team: "Unassigned",
-          hp: config.playerTuning.hp,
-          ammo: 60,
-          status: "active",
-          kills: 0,
-          hits: 0,
-          accuracy: 0,
-          damageDealt: 0,
-          cartConnected: true,
-        } as Player;
-      })
-      .filter((p): p is Player => p !== null);
-
-    setState((prev) => ({
-      ...prev,
-      players: newPlayersList,
-    }));
-  }, [activeRoster, registeredPlayers, config.playerTuning.hp]); // Removed state.phase to avoid loop, handled by check inside
-
-  const appendHistoryEntry = (players: Player[], mode: GameMode, currentConfig: GameConfig) => {
-    setMatchHistory((prev) => [
-      {
-        id: crypto.randomUUID(),
-        gameName: currentConfig.gameName,
-        gameMode: mode,
-        playedAt: new Date().toISOString(),
-        durationMinutes: currentConfig.durationMinutes,
-        winner: resolveWinner(players, mode),
-        totalKills: totalKills(players),
-      },
-      ...prev,
-    ]);
-  };
-
+  // Timer countdown (visual only, server is authoritative)
   useEffect(() => {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(matchHistory));
-  }, [matchHistory]);
-
-  useEffect(() => {
-    const tick = setInterval(() => {
+    if (state.phase !== "live" || state.raceStatus !== "running") return;
+    const timer = setInterval(() => {
       setState((prev) => {
-        if (prev.phase !== "live" || prev.raceStatus !== "running") {
-          return prev;
-        }
-
-        const nextTime = prev.raceTimeSeconds > 0 ? prev.raceTimeSeconds - 1 : 0;
-
-        const updatedPlayers: Player[] = prev.players.map((player): Player => {
-          if (!player.cartConnected) {
-            return player;
-          }
-
-          const hpShift = Math.random() > 0.7 ? Math.floor(Math.random() * 12) : 0;
-          const ammoShift = Math.random() > 0.45 ? Math.floor(Math.random() * 3) : 0;
-          const nextHp = Math.max(player.hp - hpShift, 0);
-          const stunned = nextHp <= 20 && Math.random() > 0.5;
-
-          return {
-            ...player,
-            hp: nextHp,
-            ammo: Math.max(player.ammo - ammoShift, 0),
-            status: stunned ? "stunned" : "active",
-            hits: player.hits + (Math.random() > 0.55 ? 1 : 0),
-            kills: player.kills + (Math.random() > 0.9 ? 1 : 0),
-            damageDealt: player.damageDealt + hpShift,
-            accuracy: Math.min(99, Math.max(15, player.accuracy + (Math.random() > 0.5 ? 1 : -1))),
-          };
-        });
-
-        const randomKiller = updatedPlayers[Math.floor(Math.random() * updatedPlayers.length)];
-        const randomVictim = updatedPlayers[Math.floor(Math.random() * updatedPlayers.length)];
-
-        const nextFeed =
-          Math.random() > 0.7 && randomKiller && randomVictim && randomKiller.id !== randomVictim.id
-            ? [
-                {
-                  id: crypto.randomUUID(),
-                  timestamp: formatRaceTime(config.durationMinutes * 60 - nextTime),
-                  message: `event.tag:${randomKiller.name}:${randomVictim.name}`,
-                },
-                ...prev.killFeed,
-              ].slice(0, 8)
-            : prev.killFeed;
-
-        const nextStatus = nextTime === 0 ? "finished" : prev.raceStatus;
-        const nextPhase: GamePhase = nextTime === 0 ? "results" : prev.phase;
-
-        if (nextStatus === "finished") {
-          appendHistoryEntry(updatedPlayers, config.gameMode, config);
-        }
-
-        return {
-          ...prev,
-          raceTimeSeconds: nextTime,
-          raceStatus: nextStatus,
-          phase: nextPhase,
-          players: updatedPlayers,
-          killFeed: nextFeed,
-          teamResults: calculateTeamResults(updatedPlayers, config.gameMode),
-        };
+        if (prev.raceTimeSeconds <= 0) return prev;
+        return { ...prev, raceTimeSeconds: prev.raceTimeSeconds - 1 };
       });
     }, 1000);
+    return () => clearInterval(timer);
+  }, [state.phase, state.raceStatus]);
 
-    return () => clearInterval(tick);
-  }, [config]);
+  // Load match history when entering results
+  useEffect(() => {
+    if (state.phase === "results" && auth.isAuthenticated) {
+      api
+        .listGames()
+        .then((games) =>
+          setMatchHistory(
+            games
+              .filter((g) => g.status === "finished")
+              .map((g) => ({
+                id: g.id,
+                gameName: g.code,
+                gameMode: "team" as GameMode,
+                playedAt: g.created_at,
+                durationMinutes: Math.round((g.settings?.game_duration ?? 300) / 60),
+                status: g.status,
+              }))
+              .sort((a, b) => new Date(b.playedAt).getTime() - new Date(a.playedAt).getTime()),
+          ),
+        )
+        .catch(() => {});
+    }
+  }, [state.phase, auth.isAuthenticated]);
 
   const leaderboard = useMemo(
-    () =>
-      [...state.players]
-        .filter((player) => config.gameMode === "ffa" || player.team !== "Unassigned")
-        .sort((a, b) => b.kills - a.kills || b.hits - a.hits),
-    [config.gameMode, state.players],
+    () => [...state.players].sort((a, b) => b.score - a.score || b.kills - a.kills),
+    [state.players],
   );
+
+  // ─── Actions ───
+
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const res = await api.login(username, password);
+      setAuth({ isAuthenticated: true, username, token: res.token, error: null });
+      return true;
+    } catch {
+      setAuth({ isAuthenticated: false, username: null, token: null, error: "invalid_credentials" });
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch {}
+    setAuth(initialAuth);
+    setState(initialState);
+  };
+
+  const updateConfig = (next: GameConfig) => {
+    setConfig(next);
+    setState((prev) => ({ ...prev, raceTimeSeconds: next.durationMinutes * 60 }));
+  };
+
+  const createGame = async () => {
+    try {
+      const game = await api.createGame({
+        respawn_delay: config.respawnDelay,
+        game_duration: config.durationMinutes * 60,
+        friendly_fire: config.friendlyFire,
+        max_players: config.maxPlayers,
+      });
+
+      let teams: TeamResponse[] = [];
+      if (config.gameMode === "team") {
+        const defs = [
+          { name: "Neon Green", color: "#00ff00" },
+          { name: "Neon Red", color: "#ff0000" },
+          { name: "Neon Blue", color: "#0088ff" },
+          { name: "Neon Yellow", color: "#ffff00" },
+        ];
+        for (let i = 0; i < config.teamsCount; i++) {
+          await api.addTeam(game.id, defs[i].name, defs[i].color);
+        }
+        teams = await api.listTeams(game.id);
+      }
+
+      const devices = await api.listAvailableDevices();
+
+      setState((prev) => ({
+        ...prev,
+        gameId: game.id,
+        phase: "players",
+        teams: teams.map(toTeam),
+        devices: devices.map(toDevice),
+      }));
+    } catch (err) {
+      console.error("[CreateGame]", err);
+    }
+  };
+
+  const refreshDevices = async () => {
+    try {
+      const devices = await api.listAvailableDevices();
+      setState((prev) => ({ ...prev, devices: devices.map(toDevice) }));
+    } catch {}
+  };
+
+  const addPlayer = async (deviceId: string, nickname: string, teamId?: string) => {
+    if (!state.gameId) return;
+    try {
+      await api.addPlayer(state.gameId, deviceId, nickname, teamId);
+      const [players, devices] = await Promise.all([
+        api.listPlayers(state.gameId),
+        api.listAvailableDevices(),
+      ]);
+      const teamResponses = state.teams.length > 0 ? await api.listTeams(state.gameId) : [];
+      setState((prev) => ({
+        ...prev,
+        players: players.map((p) => toPlayer(p, teamResponses)),
+        devices: devices.map(toDevice),
+      }));
+    } catch (err) {
+      console.error("[AddPlayer]", err);
+    }
+  };
+
+  const removePlayer = async (playerId: string) => {
+    if (!state.gameId) return;
+    try {
+      await api.removePlayer(state.gameId, playerId);
+      const [players, devices] = await Promise.all([
+        api.listPlayers(state.gameId),
+        api.listAvailableDevices(),
+      ]);
+      const teamResponses = state.teams.length > 0 ? await api.listTeams(state.gameId) : [];
+      setState((prev) => ({
+        ...prev,
+        players: players.map((p) => toPlayer(p, teamResponses)),
+        devices: devices.map(toDevice),
+      }));
+    } catch (err) {
+      console.error("[RemovePlayer]", err);
+    }
+  };
+
+  const assignPlayerTeam = async (playerId: string, teamId: string | null) => {
+    if (!state.gameId) return;
+    try {
+      await api.updatePlayerTeam(state.gameId, playerId, teamId);
+      const players = await api.listPlayers(state.gameId);
+      const teamResponses = state.teams.length > 0 ? await api.listTeams(state.gameId) : [];
+      setState((prev) => ({
+        ...prev,
+        players: players.map((p) => toPlayer(p, teamResponses)),
+      }));
+    } catch (err) {
+      console.error("[AssignTeam]", err);
+    }
+  };
+
+  const startRace = async () => {
+    if (!state.gameId) return;
+    try {
+      await api.startGame(state.gameId);
+      setState((prev) => ({
+        ...prev,
+        phase: "live",
+        raceStatus: "running",
+        raceTimeSeconds: config.durationMinutes * 60,
+      }));
+    } catch (err) {
+      console.error("[StartRace]", err);
+    }
+  };
+
+  const stopRace = async () => {
+    if (!state.gameId) return;
+    try {
+      await api.endGame(state.gameId);
+      const full = await api.getGameFull(state.gameId);
+      const players = full.players.map((p) => toPlayer(p, full.teams));
+      setState((prev) => ({
+        ...prev,
+        phase: "results",
+        raceStatus: "finished",
+        players,
+        teamResults: calcTeamResults(players, config.gameMode),
+        killFeed: buildKillFeed(full.events),
+      }));
+    } catch (err) {
+      console.error("[StopRace]", err);
+    }
+  };
 
   const updatePhase = (phase: GamePhase) => {
     setState((prev) => {
-      if (phase === prev.phase) {
-        return prev;
-      }
-
-      // Manual switch to live phase is not allowed (only via start button).
-      if (phase === "live") {
-        return prev;
-      }
-
-      if (prev.raceStatus === "running") {
-        return prev;
-      }
+      if (phase === prev.phase) return prev;
+      if (phase === "live") return prev;
+      if (prev.raceStatus === "running") return prev;
+      if (phase === "players" && !prev.gameId) return prev;
 
       if (phase === "setup" && prev.phase === "results") {
-        // Returning from results to setup prepares a fresh game state.
-        return {
-          ...initialState,
-          phase: "setup",
-          raceTimeSeconds: config.durationMinutes * 60,
-          teamResults: calculateTeamResults(initialPlayers, config.gameMode),
-        };
+        return { ...initialState, phase: "setup", raceTimeSeconds: config.durationMinutes * 60 };
       }
 
-      const allowedTransitions: Record<GamePhase, GamePhase[]> = {
+      const allowed: Record<GamePhase, GamePhase[]> = {
         setup: ["players", "results"],
         players: ["setup", "results"],
         results: ["setup", "players"],
         live: [],
       };
-
-      if (allowedTransitions[prev.phase].includes(phase)) {
-        return {
-          ...prev,
-          phase,
-        };
+      if (allowed[prev.phase].includes(phase)) {
+        return { ...prev, phase };
       }
-
       return prev;
     });
-  };
-
-  const updateConfig = (nextConfig: GameConfig) => {
-    setConfig(nextConfig);
-    setState((prev) => ({
-      ...prev,
-      raceTimeSeconds: nextConfig.durationMinutes * 60,
-      teamResults: calculateTeamResults(prev.players, nextConfig.gameMode),
-    }));
-  };
-
-  const assignPlayerTeam = (playerId: string, team: string) => {
-    setState((prev) => {
-      const updatedPlayers = prev.players.map((player) =>
-        player.id === playerId
-          ? {
-              ...player,
-              team,
-            }
-          : player,
-      );
-
-      return {
-        ...prev,
-        players: updatedPlayers,
-        teamResults: calculateTeamResults(updatedPlayers, config.gameMode),
-      };
-    });
-  };
-
-  const startRace = () => {
-    setState((prev) => ({ ...prev, phase: "live", raceStatus: "running" }));
-  };
-
-  const pauseRace = () => {
-    setState((prev) => ({
-      ...prev,
-      raceStatus: prev.raceStatus === "paused" ? "running" : "paused",
-    }));
-  };
-
-  const stopRace = () => {
-    if (state.raceStatus === "finished") {
-      return;
-    }
-
-    appendHistoryEntry(state.players, config.gameMode, config);
-
-    setState((prev) => ({
-      ...prev,
-      raceStatus: "finished",
-      phase: "results",
-      teamResults: calculateTeamResults(prev.players, config.gameMode),
-    }));
-  };
-
-  const login = (username: string, password: string) => {
-    const valid = username.trim() === "admin" && password === "admin123";
-
-    if (!valid) {
-      setAuth({
-        isAuthenticated: false,
-        username: null,
-        error: "invalid_credentials",
-      });
-      return false;
-    }
-
-    setAuth({
-      isAuthenticated: true,
-      username: username.trim(),
-      error: null,
-    });
-    return true;
-  };
-
-  const logout = () => {
-    setAuth(initialAuthState);
-  };
-
-  const updateMatchHistoryItem = (
-    matchId: string,
-    patch: Partial<Pick<MatchHistoryItem, "gameName" | "winner" | "durationMinutes" | "totalKills">>,
-  ) => {
-    setMatchHistory((prev) => prev.map((item) => (item.id === matchId ? { ...item, ...patch } : item)));
-  };
-
-  const deleteMatchHistoryItem = (matchId: string) => {
-    setMatchHistory((prev) => prev.filter((item) => item.id !== matchId));
-  };
-
-  const registerPlayer = (name: string, type: "guest" | "registered" = "registered") => {
-    const SUPERHERO_NAMES = [
-      "Hulk",
-      "Thor",
-      "Iron Man",
-      "Spiderman",
-      "Batman",
-      "Superman",
-      "Wonder Woman",
-      "Flash",
-      "Black Widow",
-      "Captain America",
-      "Deadpool",
-      "Doctor Strange",
-      "Black Panther",
-      "Vision",
-      "Scarlet Witch",
-    ];
-
-    let finalName = name.trim();
-    if (type === "guest") {
-      finalName = SUPERHERO_NAMES[Math.floor(Math.random() * SUPERHERO_NAMES.length)];
-    }
-
-    if (!finalName) return;
-
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    const newPlayer: RegisteredPlayer = {
-      id: crypto.randomUUID(),
-      name: finalName,
-      code,
-      type,
-      createdAt: new Date().toISOString(),
-    };
-    setRegisteredPlayers((prev) => [...prev, newPlayer]);
-  };
-
-  const deleteRegisteredPlayer = (id: string) => {
-    setRegisteredPlayers((prev) => prev.filter((p) => p.id !== id));
   };
 
   return {
@@ -571,20 +445,17 @@ export const useGameData = () => {
     auth,
     leaderboard,
     matchHistory,
-    registeredPlayers,
-    activeRoster,
-    registerPlayer,
-    deleteRegisteredPlayer,
-    toggleRosterPlayer,
+    formatRaceTime,
     updateConfig,
     updatePhase,
+    createGame,
+    addPlayer,
+    removePlayer,
     assignPlayerTeam,
+    refreshDevices,
     startRace,
-    pauseRace,
     stopRace,
     login,
     logout,
-    updateMatchHistoryItem,
-    deleteMatchHistoryItem,
   };
 };

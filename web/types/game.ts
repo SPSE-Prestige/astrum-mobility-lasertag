@@ -1,13 +1,5 @@
-export type GamePhase = "setup" | "live" | "results" | "players";
+export type GamePhase = "setup" | "players" | "live" | "results";
 export type GameMode = "team" | "ffa";
-
-export interface RegisteredPlayer {
-  id: string;
-  name: string;
-  code: string;
-  type: "guest" | "registered";
-  createdAt: string;
-}
 
 export interface GameConfig {
   gameName: string;
@@ -15,30 +7,33 @@ export interface GameConfig {
   teamsCount: number;
   gameMode: GameMode;
   friendlyFire: boolean;
-  weaponTuning: {
-    damage: number;
-    fireRate: number;
-    reloadTime: number;
-  };
-  playerTuning: {
-    hp: number;
-    respawnDelay: number;
-    cartSpeed: number;
-  };
+  respawnDelay: number;
+  maxPlayers: number;
 }
 
 export interface Player {
   id: string;
   name: string;
   team: string;
-  hp: number;
-  ammo: number;
-  status: "active" | "stunned";
+  teamId: string | null;
+  deviceId: string;
+  status: "alive" | "dead";
   kills: number;
-  hits: number;
-  accuracy: number;
-  damageDealt: number;
-  cartConnected: boolean;
+  deaths: number;
+  score: number;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface Device {
+  id: string;
+  deviceId: string;
+  status: string;
+  lastSeen: string;
 }
 
 export interface KillFeedEvent {
@@ -50,8 +45,8 @@ export interface KillFeedEvent {
 export interface TeamResult {
   team: string;
   score: number;
-  accuracy: number;
-  damageDealt: number;
+  kills: number;
+  deaths: number;
 }
 
 export interface MatchHistoryItem {
@@ -60,21 +55,24 @@ export interface MatchHistoryItem {
   gameMode: GameMode;
   playedAt: string;
   durationMinutes: number;
-  winner: string;
-  totalKills: number;
+  status: string;
 }
 
 export interface AuthState {
   isAuthenticated: boolean;
   username: string | null;
+  token: string | null;
   error: string | null;
 }
 
 export interface GameState {
   phase: GamePhase;
+  gameId: string | null;
   raceTimeSeconds: number;
-  raceStatus: "idle" | "running" | "paused" | "finished";
+  raceStatus: "idle" | "running" | "finished";
   players: Player[];
+  teams: Team[];
+  devices: Device[];
   killFeed: KillFeedEvent[];
   teamResults: TeamResult[];
 }

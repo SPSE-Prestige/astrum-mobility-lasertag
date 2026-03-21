@@ -9,7 +9,7 @@ interface LoginPanelProps {
   username: string | null;
   error: string | null;
   language: Language;
-  onLogin: (username: string, password: string) => boolean;
+  onLogin: (username: string, password: string) => Promise<boolean>;
   onLogout: () => void;
 }
 
@@ -17,9 +17,9 @@ export const LoginPanel = ({ isAuthenticated, username, error, language, onLogin
   const [form, setForm] = useState({ username: "", password: "" });
   const invalidCredentialsMessage = language === "cs" ? "Neplatné uživatelské jméno nebo heslo." : "Invalid username or password.";
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const success = onLogin(form.username, form.password);
+    const success = await onLogin(form.username, form.password);
     if (success) {
       setForm({ username: "", password: "" });
     }

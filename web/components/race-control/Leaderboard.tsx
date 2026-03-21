@@ -17,18 +17,20 @@ export const Leaderboard = ({ players, gameMode, language }: LeaderboardProps) =
           <thead className="bg-zinc-900 text-xs uppercase tracking-[0.14em] text-zinc-500">
             <tr>
               <th className="px-3 py-2">{language === "cs" ? "Hráč" : "Player"}</th>
-              <th className="px-3 py-2">{gameMode === "ffa" ? (language === "cs" ? "Režim" : "Mode") : language === "cs" ? "Tým" : "Team"}</th>
-              <th className="px-3 py-2">{language === "cs" ? "Zásahy" : "Kills"}</th>
-              <th className="px-3 py-2">{language === "cs" ? "Trefy" : "Hits"}</th>
+              <th className="px-3 py-2">{language === "cs" ? "Tým" : "Team"}</th>
+              <th className="px-3 py-2">Kills</th>
+              <th className="px-3 py-2">Deaths</th>
+              <th className="px-3 py-2">{language === "cs" ? "Skóre" : "Score"}</th>
             </tr>
           </thead>
           <tbody>
             {players.map((player) => (
               <tr key={player.id} className="border-t border-zinc-800 text-zinc-200">
                 <td className="px-3 py-2">{player.name}</td>
-                <td className="px-3 py-2">{gameMode === "ffa" ? (language === "cs" ? "Solo" : "Solo") : player.team}</td>
-                <td className="px-3 py-2 text-[#ff0000]">{player.kills}</td>
-                <td className="px-3 py-2 text-[#00ff00]">{player.hits}</td>
+                <td className="px-3 py-2">{gameMode === "ffa" ? "Solo" : player.team}</td>
+                <td className="px-3 py-2 text-[#00ff00]">{player.kills}</td>
+                <td className="px-3 py-2 text-[#ff0000]">{player.deaths}</td>
+                <td className="px-3 py-2 font-semibold">{player.score}</td>
               </tr>
             ))}
           </tbody>

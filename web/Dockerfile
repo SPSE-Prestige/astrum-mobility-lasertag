@@ -1,32 +1,43 @@
-# ── Stage 1: Dependencies ──
-FROM node:20-alpine AS deps
+# ---------- base ----------
+FROM node:20 AS base
+WORKDIR /usr/src/app
+COPY package*.json ./
 
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
-
-# ── Stage 2: Build ──
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# ---------- dev ----------
+FROM base AS dev
+ENV NODE_ENV=development
+RUN npm install --legacy-peer-deps
 COPY . .
+CMD ["npm", "run", "dev"]
 
-ENV NEXT_TELEMETRY_DISABLED=1
+# ---------- staging ----------
+FROM base AS staging
+ENV NODE_ENV=staging
+RUN npm ci --legacy-peer-deps
+COPY . .
 RUN npm run build
 
-# ── Stage 3: Runtime ──
-FROM node:20-alpine
-
-WORKDIR /app
+# ---------- build ----------
+FROM base AS build
+ARG NEXT_PUBLIC_STRAPI_URL=http://localhost:3100
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
+RUN npm ci --legacy-peer-deps
+COPY . .
+RUN npm run build
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/package.json ./
+# ---------- production ----------
+FROM node:20 AS production
+WORKDIR /usr/src/app
+
+ENV NODE_ENV=production
+
+COPY --from=build /usr/src/app/.next ./.next
+COPY --from=build /usr/src/app/public ./public
+COPY --from=build /usr/src/app/package*.json ./
+COPY --from=build /usr/src/app/next.config.mjs ./
+
+RUN npm ci --legacy-peer-deps
 
 EXPOSE 3000
-ENV PORT=3000
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx next start -p ${PORT:-3000}"]
