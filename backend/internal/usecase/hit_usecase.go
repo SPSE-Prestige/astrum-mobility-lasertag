@@ -24,9 +24,11 @@ func NewHitUseCase(
 
 // HitResult carries the outcome of a hit event.
 type HitResult struct {
-	Kill       bool
-	AttackerID string
-	VictimID   string
+	Kill          bool
+	AttackerID    string
+	VictimID      string
+	AttackerScore int
+	AttackerKills int
 }
 
 // ProcessHit handles a hit event from MQTT. 1 shot = 1 kill.
@@ -100,9 +102,11 @@ func (uc *HitUseCase) ProcessHit(ctx context.Context, gameID, attackerDeviceID, 
 	_ = uc.events.Create(ctx, event)
 
 	return &HitResult{
-		Kill:       true,
-		AttackerID: attacker.ID,
-		VictimID:   victim.ID,
+		Kill:          true,
+		AttackerID:    attacker.ID,
+		VictimID:      victim.ID,
+		AttackerScore: attacker.Score,
+		AttackerKills: attacker.Kills,
 	}, nil
 }
 

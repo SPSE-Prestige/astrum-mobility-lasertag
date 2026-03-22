@@ -51,7 +51,7 @@ void setup() {
     ir.setPlayerId(playerId);
     Serial.println("Setted up ir");
 
-    can.begin(5,6,500000);
+    can.begin(5,6,1000000);
     if(can.registerPlayer(playerId)) {
         Serial.println("Player registered on CAN bus");
     } else {

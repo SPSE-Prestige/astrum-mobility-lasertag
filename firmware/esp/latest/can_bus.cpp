@@ -4,17 +4,14 @@
 namespace lt {
 
 bool CanBus::registerPlayer(uint8_t playerId) {
-    twai_message_t msg{};
     // CAN ID = 0x00P  (System=0, Register=0, Serie=playerId)
-    msg.identifier = (0x0 << 8) | (0x0 << 4) | (playerId & 0xF);
-    msg.data_length_code = 0;
-    return send
+    uint32_t id = (playerId & 0xF);
+    return send(id, nullptr, 0);
 }
 
 bool CanBus::begin(int tx, int rx, int bitrate) {
-    // General config: loopback mode = 3
     twai_general_config_t g_config =
-        TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)tx, (gpio_num_t)rx, (twai_mode_t)3);
+        TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)tx, (gpio_num_t)rx, TWAI_MODE_NORMAL);
 
     // Timing config
     twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
@@ -36,7 +33,7 @@ bool CanBus::begin(int tx, int rx, int bitrate) {
         return false;
     }
 
-    Serial.println("CAN bus initialized (loopback ON)");
+    Serial.println("CAN bus initialized (normal mode)");
     return true;
 }
 
