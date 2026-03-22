@@ -137,10 +137,12 @@ func (c *Client) handleEvent(ctx context.Context, attackerDeviceID string, paylo
 
 	log.Printf("[MQTT] kill: %s -> %s", attackerDeviceID, evt.VictimID)
 
-	// Notify attacker device of confirmed kill
+	// Notify attacker device of confirmed kill (include score+kills for CAN→MP135)
 	c.SendCommand(attackerDeviceID, map[string]any{
 		"action":    "kill_confirmed",
 		"victim_id": evt.VictimID,
+		"score":     result.AttackerScore,
+		"kills":     result.AttackerKills,
 	})
 
 	// Notify victim device to die
@@ -203,7 +205,7 @@ func (c *Client) PublishGameStart(deviceIDs []string, gameID string) {
 func (c *Client) PublishGameEnd(deviceIDs []string) {
 	for _, did := range deviceIDs {
 		c.SendCommand(did, map[string]any{
-			"action": "game_end",
+			"action":  "game_end",
 		})
 	}
 }

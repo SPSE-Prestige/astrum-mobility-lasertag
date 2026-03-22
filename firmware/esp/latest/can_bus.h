@@ -15,6 +15,7 @@ using CanHandler = std::function<void(const CanFrame&)>;
 class CanBus {
 public:
     bool begin(int tx, int rx, int bitrate = 500000);
+    bool registerPlayer(uint8_t);
     void loop();
     bool send(uint32_t id, const uint8_t* data, uint8_t len);
     void onReceive(CanHandler cb);
