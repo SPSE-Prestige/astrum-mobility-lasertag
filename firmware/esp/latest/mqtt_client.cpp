@@ -1,17 +1,20 @@
 #include "mqtt_client.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include "can_bus.h"
 
 namespace lt {
 int playerId_ = 0;
 String gameId = "";
 static const unsigned long heartbeatInterval_ = 6000; // 6 seconds
 static unsigned long lastHeartbeat_ = 0;
+lt::CanBus can_;
 
 // ── Begin ──
-void MqttClient::begin(const char* host, int port, int playerId) {
+void MqttClient::begin(const char* host, int port, int playerId, CanBus can) {
     client_.setServer(host, port);
     playerId_ = playerId;
+    can_ = can;
 
     // Set internal callback
     client_.setCallback([this](char* topic, byte* payload, unsigned int len){
@@ -105,11 +108,15 @@ void MqttClient::messageReceived(char* topic, byte* payload, unsigned int len) {
     // Call user handler if set
     if(doc.containsKey("action") && doc.containsKey("game_id")) {
         String action = doc["action"].as<String>();
-        if (action == "game_start") {
-            gameId = doc["game_id"].as<String>();
-            Serial.println("Game is starting! ID: " + gameId);
-        } else if (action == "game_end") {
-            gameId = "";
+
+        if(action == "game_start") {
+            // Send CAN frame: 0x200 = GAME(2) + START(0) + broadcast(0)
+            can_.send(0x200, nullptr, 0);
+            Serial.println("[CAN] Sent GAME_START frame");
+        } else if(action == "game_end") {
+            // Send CAN frame: 0x210 = GAME(2) + END(1) + broadcast(0)
+            can_.send(0x210, nullptr, 0);
+            Serial.println("[CAN] Sent GAME_END frame");
         }
     }
 

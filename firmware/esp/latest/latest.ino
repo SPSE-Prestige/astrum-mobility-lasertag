@@ -9,6 +9,7 @@ lt::IRController ir(2,1,41);
 lt::CanBus can;
 lt::MqttClient mqtt;
 int code = -1;
+int eventCode = -1;
 int playerId = 0;
 
 uint32_t getPlayerId() {
@@ -51,16 +52,16 @@ void setup() {
     Serial.println("Setted up ir");
 
     can.begin(5,6,500000);
+    if(can.registerPlayer(playerId)) {
+        Serial.println("Player registered on CAN bus");
+    } else {
+        Serial.println("Failed to register player");
+    }
     Serial.println("Setted up can");
 
-    mqtt.begin("192.168.0.196",1883,playerId);
+    mqtt.begin("192.168.0.196",1883,playerId, can);
     mqtt.onMessage([](const String& topic, const String& msg){
         Serial.println("Setted up mqtt");
-    });
-
-
-    can.onReceive([](const lt::CanFrame& f){
-        Serial.println("CAN RX");
     });
 
     mqtt.onMessage([](const String& topic, const String& payload){
@@ -73,7 +74,7 @@ void loop() {
     ir.sendloop();
     code = ir.reciveloop();
 
-    can.loop();
     mqtt.loop(code);
     code = -1;
+
 }
