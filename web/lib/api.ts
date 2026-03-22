@@ -67,8 +67,8 @@ export interface EventResponse {
 
 const API_BASE =
   typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-    : "http://localhost:8080";
+    ? (process.env.NEXT_PUBLIC_API_URL ?? "")
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080");
 
 class ApiClient {
   private token: string | null = null;

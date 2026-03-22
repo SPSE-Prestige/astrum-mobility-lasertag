@@ -19,8 +19,8 @@ RUN npm run build
 
 # ---------- build ----------
 FROM base AS build
-ARG NEXT_PUBLIC_STRAPI_URL=http://localhost:3100
-ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
+ARG NEXT_PUBLIC_API_URL=""
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN npm ci --legacy-peer-deps
 COPY . .
 ENV NODE_ENV=production

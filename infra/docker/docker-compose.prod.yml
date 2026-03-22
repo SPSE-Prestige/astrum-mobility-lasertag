@@ -101,7 +101,6 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8080
       - NODE_ENV=production
     depends_on:
       backend:
