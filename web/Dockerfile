@@ -20,10 +20,10 @@ RUN npm run build
 # ---------- build ----------
 FROM base AS build
 ARG NEXT_PUBLIC_STRAPI_URL=http://localhost:3100
-ENV NODE_ENV=production
 ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
 RUN npm ci --legacy-peer-deps
 COPY . .
+ENV NODE_ENV=production
 RUN npm run build
 
 # ---------- production ----------
@@ -35,7 +35,7 @@ ENV NODE_ENV=production
 COPY --from=build /usr/src/app/.next ./.next
 COPY --from=build /usr/src/app/public ./public
 COPY --from=build /usr/src/app/package*.json ./
-COPY --from=build /usr/src/app/next.config.mjs ./
+COPY --from=build /usr/src/app/next.config.ts ./
 
 RUN npm ci --legacy-peer-deps
 
