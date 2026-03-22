@@ -137,6 +137,12 @@ func (c *Client) handleEvent(ctx context.Context, attackerDeviceID string, paylo
 
 	log.Printf("[MQTT] kill: %s -> %s", attackerDeviceID, evt.VictimID)
 
+	// Notify attacker device of confirmed kill
+	c.SendCommand(attackerDeviceID, map[string]any{
+		"action":    "kill_confirmed",
+		"victim_id": evt.VictimID,
+	})
+
 	// Notify victim device to die
 	c.SendCommand(evt.VictimID, map[string]any{
 		"action": "die",
