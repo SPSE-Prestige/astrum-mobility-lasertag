@@ -107,6 +107,12 @@ void CanReceiver::reader_loop() {
 }
 
 void CanReceiver::decode_frame(uint32_t id, const uint8_t* data, uint8_t len) {
+    // Direct match for shoot (0x140)
+    if (id == 0x140) {
+        bus_.emit(EventType::PLAYER_SHOOT, 0);
+        return;
+    }
+
     const uint8_t info  = can_info(id);
     const uint8_t func  = can_func(id);
     const uint8_t serie = can_serie(id);
