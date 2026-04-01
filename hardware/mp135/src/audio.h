@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <sys/types.h>
 
 namespace lt {
 
@@ -27,6 +28,7 @@ enum class SoundId : uint8_t {
     RESPAWN,
     AMMO_LOW,
     AMMO_EMPTY,
+    SHOOT,
 };
 
 class Audio {
@@ -50,6 +52,7 @@ public:
 private:
     std::string media_dir_;
     std::unordered_map<SoundId, std::string> sounds_;
+    pid_t last_shoot_pid_ = -1;
     int volume_ = 80;
 };
 
