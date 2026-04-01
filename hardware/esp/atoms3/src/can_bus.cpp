@@ -1,4 +1,5 @@
 #include "can_bus.h"
+#include "can_debug.h"
 #include <driver/twai.h>
 
 namespace lt {
@@ -52,11 +53,13 @@ void CanBus::loop() {
         f.len = msg.data_length_code;
         memcpy(f.data, msg.data, f.len);
 
+        CAN_DEBUG_RX(f.id, f.data, f.len);
         handler_(f);
     }
 }
 
 bool CanBus::send(uint32_t id, const uint8_t* data, uint8_t len) {
+    CAN_DEBUG_TX(id, data, len);
     twai_message_t msg{};
     msg.identifier = id;
     msg.data_length_code = len;
