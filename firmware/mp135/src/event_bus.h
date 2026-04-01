@@ -31,6 +31,7 @@ enum class EventType : uint8_t {
     PLAYER_HIT,           // data: player_id, attacker_id
     PLAYER_KILL,          // data: killer_id, victim_id
     PLAYER_DEATH,         // data: player_id
+    PLAYER_SHOOT,         // data: player_id
     PLAYER_RESPAWN,       // data: player_id
 
     // ── Status updates ──
