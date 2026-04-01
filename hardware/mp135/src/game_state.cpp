@@ -20,7 +20,6 @@ void GameState::init() {
     bus_.on(EventType::PLAYER_HIT, [this](const Event& e) { on_player_hit(e); });
     bus_.on(EventType::PLAYER_KILL,[this](const Event& e) { on_player_kill(e); });
     bus_.on(EventType::PLAYER_DEATH, [this](const Event& e) { on_player_death(e); });
-    bus_.on(EventType::PLAYER_SHOOT, [this](const Event& e) { on_player_shoot(e); });
     bus_.on(EventType::PLAYER_RESPAWN, [this](const Event& e) { on_player_respawn(e); });
     bus_.on(EventType::SCORE_UPDATE, [this](const Event& e) { on_score_update(e); });
     bus_.on(EventType::AMMO_UPDATE, [this](const Event& e) { on_ammo_update(e); });
@@ -107,12 +106,6 @@ void GameState::on_player_kill(const Event& ev) {
     if (victim > 0 && victim < MAX_PLAYERS) {
         players_[victim].deaths++;
     }
-}
-
-void GameState::on_player_shoot(const Event& ev) {
-    uint8_t player_id = ev.player_id;
-    std::fprintf(stderr, "[COMBAT] Player %u shoot\n", player_id);
-    audio_.play(SoundId::SHOOT);
 }
 
 void GameState::on_player_death(const Event& ev) {

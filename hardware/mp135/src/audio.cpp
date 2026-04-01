@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
-#include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -13,7 +12,7 @@ Audio::Audio(const std::string& media_dir)
     : media_dir_(media_dir) {
     // Register default sound mappings
     register_sound(SoundId::DEATH,      "gta-death.wav");
-    register_sound(SoundId::SHOOT,      "shoot.wav");
+    register_sound(SoundId::KILL,       "mario-death.wav");
 }
 
 void Audio::register_sound(SoundId id, const std::string& filename) {
@@ -30,13 +29,6 @@ void Audio::play(SoundId id) {
     if (access(path.c_str(), R_OK) != 0) {
         std::fprintf(stderr, "[AUDIO] file not found: %s\n", path.c_str());
         return;
-    }
-
-    // For SHOOT: kill previous aplay so new one starts instantly
-    if (id == SoundId::SHOOT && last_shoot_pid_ > 0) {
-        kill(last_shoot_pid_, SIGKILL);
-        waitpid(last_shoot_pid_, nullptr, WNOHANG);
-        last_shoot_pid_ = -1;
     }
 
     // Fork + exec aplay for async non-blocking playback
@@ -61,12 +53,9 @@ void Audio::play(SoundId id) {
         _exit(1);
     }
 
-    // Track shoot PID for quick kill on next shot
-    if (id == SoundId::SHOOT) {
-        last_shoot_pid_ = pid;
-    }
-
-    // Parent — reap any finished children (no zombie)
+    // Parent — reap child asynchronously (no zombie)
+    // Use SIGCHLD ignore or waitpid in background
+    // We'll do a non-blocking waitpid sweep
     int status;
     while (waitpid(-1, &status, WNOHANG) > 0) {
         // Reap any finished children

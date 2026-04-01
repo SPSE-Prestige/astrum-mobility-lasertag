@@ -87,7 +87,6 @@ private:
     void on_player_hit(const Event& ev);
     void on_player_kill(const Event& ev);
     void on_player_death(const Event& ev);
-    void on_player_shoot(const Event& ev);
     void on_player_respawn(const Event& ev);
     void on_score_update(const Event& ev);
     void on_ammo_update(const Event& ev);
