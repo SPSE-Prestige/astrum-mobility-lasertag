@@ -1,0 +1,9 @@
+{
+  "name": "aimtec2026-lasertag",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "mobile": "cd mobile && expo start",
+    "mobile:build": "cd mobile && expo build"
+  }
+}
