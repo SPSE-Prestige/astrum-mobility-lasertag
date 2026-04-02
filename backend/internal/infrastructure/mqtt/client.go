@@ -301,11 +301,14 @@ func (c *Client) SendCommand(deviceID string, command any) {
 }
 
 // PublishGameStart notifies all players' devices that the game has started.
-func (c *Client) PublishGameStart(deviceIDs []string, gameID string) {
-	for _, did := range deviceIDs {
-		c.SendCommand(did, map[string]any{
-			"action":  "game_start",
-			"game_id": gameID,
+func (c *Client) PublishGameStart(players []domain.Player, game domain.Game) {
+	for _, did := range players {
+		c.SendCommand(did.DeviceID, map[string]any{
+			"action":           "game_start",
+			"game_id":          game.ID,
+			"team_id":          did.TeamID,
+			"is_frendlyfire":   game.Settings.FriendlyFire, // false nebo true
+			"type_of_the_game": game.Settings.TypeOfGame,   // 0 - deathmatch, 1 - team deathmatch
 		})
 	}
 }
@@ -322,14 +325,17 @@ func (c *Client) PublishGameEnd(deviceIDs []string) {
 // PublishGameState sends full game state to a reconnecting device.
 func (c *Client) PublishGameState(deviceID string, info *domain.ReconnectInfo) {
 	c.SendCommand(deviceID, map[string]any{
-		"action":         "game_rejoin",
-		"game_id":        info.Game.ID,
-		"is_alive":       info.Player.IsAlive,
-		"kills":          info.Player.Kills,
-		"deaths":         info.Player.Deaths,
-		"score":          info.Player.Score,
-		"weapon_level":   info.Player.WeaponLevel,
-		"kill_streak":    info.Player.KillStreak,
-		"remaining_time": info.RemainingTime,
+		"action":           "game_rejoin",
+		"game_id":          info.Game.ID,
+		"is_alive":         info.Player.IsAlive,
+		"kills":            info.Player.Kills,
+		"deaths":           info.Player.Deaths,
+		"score":            info.Player.Score,
+		"weapon_level":     info.Player.WeaponLevel,
+		"kill_streak":      info.Player.KillStreak,
+		"remaining_time":   info.RemainingTime,
+		"team_id":          info.Player.TeamID,
+		"is_frendlyfire":   info.Game.Settings.FriendlyFire, // false nebo true
+		"type_of_the_game": info.Game.Settings.TypeOfGame,   // 0 - deathmatch, 1 - team deathmatch
 	})
 }
