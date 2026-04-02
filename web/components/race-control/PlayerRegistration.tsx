@@ -11,6 +11,7 @@ interface PlayerRegistrationProps {
   teams: Team[];
   gameMode: GameMode;
   language: Language;
+  actionLoading?: Record<string, boolean>;
   onAddPlayer: (deviceId: string, nickname: string, teamId?: string) => Promise<void>;
   onRemovePlayer: (playerId: string) => Promise<void>;
   onAssignTeam: (playerId: string, teamId: string | null) => Promise<void>;
@@ -24,6 +25,7 @@ export const PlayerRegistration = ({
   teams,
   gameMode,
   language,
+  actionLoading = {},
   onAddPlayer,
   onRemovePlayer,
   onAssignTeam,
@@ -63,10 +65,14 @@ export const PlayerRegistration = ({
         <button
           type="button"
           onClick={onStartGame}
-          disabled={players.length < 2}
+          disabled={players.length < 2 || actionLoading.startRace}
           className="rounded-xl border-2 border-[#00ff00] bg-[#00ff00]/20 px-6 py-3 text-lg font-semibold uppercase tracking-[0.16em] text-[#00ff00] shadow-[0_0_20px_rgba(0,255,0,0.3)] transition hover:bg-[#00ff00]/30 hover:shadow-[0_0_30px_rgba(0,255,0,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <Play className="mr-2 inline h-5 w-5" />
+          {actionLoading.startRace ? (
+            <RefreshCw className="mr-2 inline h-5 w-5 animate-spin" />
+          ) : (
+            <Play className="mr-2 inline h-5 w-5" />
+          )}
           {language === "cs" ? "Spustit hru" : "Start Game"}
         </button>
       </header>
@@ -107,10 +113,11 @@ export const PlayerRegistration = ({
               <button
                 type="button"
                 onClick={onRefreshDevices}
-                className="mb-0.5 rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                disabled={actionLoading.refreshDevices}
+                className="mb-0.5 rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-50"
                 title={language === "cs" ? "Obnovit zařízení" : "Refresh devices"}
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${actionLoading.refreshDevices ? "animate-spin" : ""}`} />
               </button>
             </div>
 

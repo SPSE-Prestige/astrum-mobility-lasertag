@@ -17,7 +17,7 @@ export const GameControls = ({ raceTime, raceStatus, language, onStop }: GameCon
   };
 
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6">
+    <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6" role="timer" aria-label="Game clock">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{language === "cs" ? "Časomíra" : "Race Clock"}</p>

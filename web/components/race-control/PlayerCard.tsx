@@ -15,7 +15,9 @@ export const PlayerCard = ({ player, language }: PlayerCardProps) => {
 
   return (
     <article
-      className={`rounded-xl border p-4 ${
+      role="region"
+      aria-label={`${player.name} – ${statusLabel}`}
+      className={`rounded-xl border p-4 transition-all ${
         isAlive
           ? "border-zinc-800 bg-zinc-950/70"
           : "border-red-900/50 bg-red-950/20 opacity-75"
