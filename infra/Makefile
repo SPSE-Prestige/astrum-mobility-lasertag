@@ -58,7 +58,7 @@ build: ## Sestaví všechny image (dev)
 # ──────────────────────────────────────────────
 
 db-migrate: ## Spustí migrace (prisma migrate deploy)
-	$(COMPOSE_DEV) run --rm prisma-migrate
+	$(COMPOSE_DEV) run --build --rm prisma-migrate
 
 db-seed: ## Spustí seedování databáze
 	$(COMPOSE_DEV) run --rm prisma-seed
