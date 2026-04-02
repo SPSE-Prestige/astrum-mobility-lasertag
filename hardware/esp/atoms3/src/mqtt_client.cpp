@@ -112,13 +112,14 @@ void MqttClient::messageReceived(char* topic, byte* payload, unsigned int len) {
         can_.send(CAN_STATUS_SCORE(pid), ldata, 2);
         Serial.printf("[GAME] kills=%d level=%d\n", gameState_.kills(), gameState_.level());
     }
-    else if (action == "upgrade") {
+    else if (action == "weapon_upgrade") {
         gameState_.upgrade();
         uint8_t ldata[2] = { gameState_.kills(), gameState_.level() };
         can_.send(CAN_STATUS_SCORE(pid), ldata, 2);
         Serial.printf("[GAME] Upgrade → level=%d\n", gameState_.level());
     }
     else if (action == "die") {
+        gameState_.reset();
         can_.send(CAN_COMBAT_DEATH(pid), nullptr, 0);
         can_.send(CAN_HW_MOTOR_OFF(pid), nullptr, 0);
         if (dieCallback_) dieCallback_();

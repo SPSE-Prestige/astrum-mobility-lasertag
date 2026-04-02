@@ -9,6 +9,9 @@
 #define PIN_IR_TX       2   // Port A SDA — hit TX
 #define PIN_HIT_ENABLE  1   // Port A SCL — hit enable/control
 
+// Port B — second IR transmitter (unlocked at level 6)
+#define PIN_IR_TX_B     8   // Port B SDA
+
 // Port C — IR receivers (input only)
 #define PIN_IR_RX_1     5   // Port C
 #define PIN_IR_RX_2     4   // Port C

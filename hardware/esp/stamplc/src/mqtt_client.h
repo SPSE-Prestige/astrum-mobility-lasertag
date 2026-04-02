@@ -4,6 +4,7 @@
 #include <functional>
 #include "can_bus.h"
 #include "game_state.h"
+#include "ir_controller.h"
 
 namespace lt {
 
@@ -13,7 +14,7 @@ class MqttClient {
 public:
     MqttClient() = default;
 
-    void begin(const char* host, int port, int playerId, CanBus can);
+    void begin(const char* host, int port, int playerId, CanBus can, IRSender& irTx);
     void loop(int code);
     void publish(const char* topic, const char* payload);
     void onMessage(MqttHandler cb);
@@ -44,6 +45,7 @@ private:
     String gameId_;
     bool registered_ = false;
     CanBus can_;
+    IRSender* irTx_ = nullptr;
 
     unsigned long lastHeartbeat_ = 0;
     const unsigned long heartbeatInterval_ = 6000;

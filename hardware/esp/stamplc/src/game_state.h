@@ -8,7 +8,7 @@ class GameState {
 public:
     void reset() {
         kills_ = 0;
-        level_ = 1;
+        level_ = 0;
     }
 
     // Call on each confirmed kill (server decides level-up separately).
@@ -37,7 +37,7 @@ public:
 
 private:
     uint8_t kills_ = 0;
-    uint8_t level_ = 1;
+    uint8_t level_ = 0;
     std::function<void(uint8_t, uint8_t)> killCallback_;
     std::function<void(uint8_t)> levelUpCallback_;
 };

@@ -2,13 +2,18 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "can_protocol.h"
+#include "../pins.h"
 
 namespace lt {
 
-void MqttClient::begin(const char* host, int port, int playerId, CanBus can) {
+// Cooldown in ms per level (index = level 0–5)
+static const unsigned long LEVEL_COOLDOWNS[] = { 2000, 1000, 500, 200, 100, 100 };
+
+void MqttClient::begin(const char* host, int port, int playerId, CanBus can, IRSender& irTx) {
     client_.setServer(host, port);
     playerId_ = playerId;
     can_      = can;
+    irTx_     = &irTx;
     registered_ = false;
 
     client_.setCallback([this](char* topic, byte* payload, unsigned int len){
@@ -112,13 +117,22 @@ void MqttClient::messageReceived(char* topic, byte* payload, unsigned int len) {
         can_.send(CAN_STATUS_SCORE(pid), ldata, 2);
         Serial.printf("[GAME] kills=%d level=%d\n", gameState_.kills(), gameState_.level());
     }
-    else if (action == "upgrade") {
+    else if (action == "weapon_upgrade") {
         gameState_.upgrade();
-        uint8_t ldata[2] = { gameState_.kills(), gameState_.level() };
+        uint8_t level = gameState_.level();
+        uint8_t ldata[2] = { gameState_.kills(), level };
         can_.send(CAN_STATUS_SCORE(pid), ldata, 2);
-        Serial.printf("[GAME] Upgrade → level=%d\n", gameState_.level());
+        Serial.printf("[GAME] Upgrade → level=%d\n", level);
+
+        if (irTx_) {
+            uint8_t idx = level <= 5 ? level : 5;
+            irTx_->setCooldown(LEVEL_COOLDOWNS[idx]);
+            if (level >= 5) irTx_->enableSecondTx(PIN_IR_TX_B);
+        }
     }
     else if (action == "die") {
+        gameState_.reset();
+        if (irTx_) irTx_->setCooldown(LEVEL_COOLDOWNS[0]); // back to level 0 default
         can_.send(CAN_COMBAT_DEATH(pid), nullptr, 0);
         can_.send(CAN_HW_MOTOR_OFF(pid), nullptr, 0);
         if (dieCallback_) dieCallback_();

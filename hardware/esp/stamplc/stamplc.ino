@@ -68,13 +68,9 @@ void setup() {
     irTx.setPlayerId(playerId);
     irTx.onShoot([]() {
         M5.Display.fillScreen(RED);
-        delay(200);
-        M5.Display.fillScreen(BLACK);
     });
     irTx.onCooldown([]() {
         M5.Display.fillScreen(GREEN);
-        delay(200);
-        M5.Display.fillScreen(BLACK);
     });
     Serial.println("IR TX ready (Port A)");
 
@@ -89,7 +85,7 @@ void setup() {
         Serial.println("Failed to register player");
     }
 
-    mqtt.begin(MQTT_HOST, MQTT_PORT, playerId, can);
+    mqtt.begin(MQTT_HOST, MQTT_PORT, playerId, can, irTx);
     mqtt.onMessage([](const String& topic, const String& payload) {
         Serial.println("MQTT RX");
     });
@@ -144,6 +140,8 @@ void setup() {
         M5.Display.setTextSize(2);
         M5.Display.setCursor(10, 20);
         M5.Display.println("GAME OVER");
+        delay(3000);
+        M5.Display.fillScreen(BLACK);
     });
     mqtt.onDie([]() {
         isDead = true;

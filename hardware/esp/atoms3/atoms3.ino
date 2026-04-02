@@ -70,13 +70,9 @@ void setup() {
     ir.setPlayerId(playerId);
     ir.onShoot([]() {
         M5.Display.fillScreen(RED);
-        delay(200);
-        M5.Display.fillScreen(BLACK);
     });
     ir.onCooldown([]() {
         M5.Display.fillScreen(GREEN);
-        delay(200);
-        M5.Display.fillScreen(BLACK);
     });
     Serial.println("IR ready (Port A)");
 
@@ -144,6 +140,8 @@ void setup() {
         M5.Display.setTextSize(2);
         M5.Display.setCursor(10, 20);
         M5.Display.println("GAME OVER");
+        delay(3000);
+        M5.Display.fillScreen(BLACK);
     });
     mqtt.onDie([]() {
         isDead = true;

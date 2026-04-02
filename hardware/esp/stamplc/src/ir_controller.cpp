@@ -16,6 +16,19 @@ void IRSender::setPlayerId(uint32_t id) {
     playerId_ = id;
 }
 
+void IRSender::setCooldown(unsigned long ms) {
+    cooldownMs_ = ms;
+    Serial.printf("[IR TX] Cooldown set to %lums\n", ms);
+}
+
+void IRSender::enableSecondTx(int txPin) {
+    if (!irsend2_) {
+        irsend2_ = new IRsend(txPin);
+        irsend2_->begin();
+        Serial.printf("[IR TX] Second emitter enabled on pin %d\n", txPin);
+    }
+}
+
 void IRSender::onShoot(std::function<void()> cb) {
     shootCallback_ = cb;
 }
@@ -26,7 +39,7 @@ void IRSender::onCooldown(std::function<void()> cb) {
 
 void IRSender::loop() {
     bool pressed = false;
-    
+
     if (buttonReader_) {
         pressed = buttonReader_();
     }
@@ -35,14 +48,14 @@ void IRSender::loop() {
     if (pressed && !wasPressed_) {
         unsigned long elapsed = millis() - lastShootMs_;
         Serial.print("[IR TX] btn=1  cooldown_remaining=");
-        Serial.println(elapsed < 2000 ? 2000 - elapsed : 0);
+        Serial.println(elapsed < cooldownMs_ ? cooldownMs_ - elapsed : 0);
     }
 #endif
     wasPressed_ = pressed;
 
     if (pressed) {
         unsigned long now = millis();
-        if (now - lastShootMs_ < 2000) {
+        if (now - lastShootMs_ < cooldownMs_) {
             if (cooldownCallback_) cooldownCallback_();
             return;
         }
@@ -56,6 +69,7 @@ void IRSender::loop() {
 
 void IRSender::send(uint32_t code) {
     irsend_.sendNEC(code, 32);
+    if (irsend2_) irsend2_->sendNEC(code, 32);
 }
 
 

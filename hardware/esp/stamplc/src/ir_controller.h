@@ -19,15 +19,19 @@ public:
     void loop();
     void send(uint32_t code);
     void setPlayerId(uint32_t id);
+    void setCooldown(unsigned long ms);   // set reload time in ms
+    void enableSecondTx(int txPin);       // unlock second emitter (level 6)
     void onShoot(std::function<void()> cb);
     void onCooldown(std::function<void()> cb);
 
 private:
     IRsend irsend_;
+    IRsend* irsend2_ = nullptr;  // second emitter, null until level 6
     ButtonReader buttonReader_;
     std::function<void()> shootCallback_;
     std::function<void()> cooldownCallback_;
     uint32_t playerId_ = 0;
+    unsigned long cooldownMs_ = 2000;
     unsigned long lastShootMs_ = -2000UL;
     bool wasPressed_ = false;
 };
