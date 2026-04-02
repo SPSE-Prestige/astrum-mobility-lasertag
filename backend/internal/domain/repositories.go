@@ -105,7 +105,7 @@ type DeviceUseCasePort interface {
 	Heartbeat(ctx context.Context, deviceID string) error
 	// Reconnect checks if a device has an active game session and restores its state.
 	// Returns nil info if the device is not in any running game.
-	Reconnect(ctx context.Context, deviceID string) (*ReconnectInfo, error)
+	Reconnect(ctx context.Context, deviceId string) (*ReconnectInfo, error)
 	MarkOffline(ctx context.Context, timeout time.Duration) ([]string, error)
 	ListAll(ctx context.Context) ([]Device, error)
 	ListAvailable(ctx context.Context) ([]Device, error)
@@ -117,7 +117,7 @@ type GameUseCasePort interface {
 	GetGame(ctx context.Context, id string) (*Game, error)
 	ListGames(ctx context.Context) ([]Game, error)
 	GetGameFull(ctx context.Context, gameID string) (*GameFull, error)
-	StartGame(ctx context.Context, gameID string) (*Game, []string, error) // returns game + device IDs
+	StartGame(ctx context.Context, gameID string) (*Game, []Player, error) // returns game + device IDs
 	EndGame(ctx context.Context, gameID string) (*Game, []string, error)   // returns game + device IDs
 	UpdateSettings(ctx context.Context, gameID string, settings GameSettings) (*Game, error)
 	AddTeam(ctx context.Context, gameID, name, color string) (*Team, error)
@@ -148,7 +148,7 @@ type HitUseCasePort interface {
 // MQTTPublisher defines MQTT command publishing.
 type MQTTPublisher interface {
 	SendCommand(deviceID string, command any)
-	PublishGameStart(deviceIDs []string, gameID string)
+	PublishGameStart(players []Player, gameID string)
 	PublishGameEnd(deviceIDs []string)
 	// PublishGameState sends current game state to a single reconnecting device.
 	PublishGameState(deviceID string, info *ReconnectInfo)

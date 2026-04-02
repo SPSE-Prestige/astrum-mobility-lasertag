@@ -148,19 +148,19 @@ func (m *MockTeamRepository) Delete(ctx context.Context, id string) error {
 // ── PlayerRepository ──
 
 type MockPlayerRepository struct {
-	CreateFn                      func(ctx context.Context, p *domain.Player) error
-	GetByIDFn                     func(ctx context.Context, id string) (*domain.Player, error)
-	GetByGameAndDeviceFn          func(ctx context.Context, gameID, deviceID string) (*domain.Player, error)
-	FindActivePlayerByDeviceFn    func(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error)
-	ListByGameFn                  func(ctx context.Context, gameID string) ([]domain.Player, error)
-	ListByTeamFn                  func(ctx context.Context, teamID string) ([]domain.Player, error)
-	UpdateFn                      func(ctx context.Context, p *domain.Player) error
-	DeleteFn                      func(ctx context.Context, id string) error
-	KillPlayerFn                  func(ctx context.Context, playerID string) (bool, error)
-	AddKillScoreFn                func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
-	RespawnFn                     func(ctx context.Context, playerID string) error
-	IncrementShotsFiredFn         func(ctx context.Context, playerID string) error
-	GetBySessionCodeFn            func(ctx context.Context, code string) (*domain.Player, error)
+	CreateFn                   func(ctx context.Context, p *domain.Player) error
+	GetByIDFn                  func(ctx context.Context, id string) (*domain.Player, error)
+	GetByGameAndDeviceFn       func(ctx context.Context, gameID, deviceID string) (*domain.Player, error)
+	FindActivePlayerByDeviceFn func(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error)
+	ListByGameFn               func(ctx context.Context, gameID string) ([]domain.Player, error)
+	ListByTeamFn               func(ctx context.Context, teamID string) ([]domain.Player, error)
+	UpdateFn                   func(ctx context.Context, p *domain.Player) error
+	DeleteFn                   func(ctx context.Context, id string) error
+	KillPlayerFn               func(ctx context.Context, playerID string) (bool, error)
+	AddKillScoreFn             func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
+	RespawnFn                  func(ctx context.Context, playerID string) error
+	IncrementShotsFiredFn      func(ctx context.Context, playerID string) error
+	GetBySessionCodeFn         func(ctx context.Context, code string) (*domain.Player, error)
 }
 
 func (m *MockPlayerRepository) Create(ctx context.Context, p *domain.Player) error {
@@ -256,10 +256,10 @@ func (m *MockTxManager) WithTx(ctx context.Context, fn func(ctx context.Context)
 // ── MQTTPublisher ──
 
 type MockMQTTPublisher struct {
-	SendCommandFn       func(deviceID string, command any)
-	PublishGameStartFn  func(deviceIDs []string, gameID string)
-	PublishGameEndFn    func(deviceIDs []string)
-	PublishGameStateFn  func(deviceID string, info *domain.ReconnectInfo)
+	SendCommandFn      func(deviceID string, command any)
+	PublishGameStartFn func(deviceIDs []domain.Player, gameID string)
+	PublishGameEndFn   func(deviceIDs []string)
+	PublishGameStateFn func(deviceID string, info *domain.ReconnectInfo)
 }
 
 func (m *MockMQTTPublisher) SendCommand(deviceID string, command any) {
@@ -268,9 +268,9 @@ func (m *MockMQTTPublisher) SendCommand(deviceID string, command any) {
 	}
 }
 
-func (m *MockMQTTPublisher) PublishGameStart(deviceIDs []string, gameID string) {
+func (m *MockMQTTPublisher) PublishGameStart(deviceIDs []domain.Player, gameID string) {
 	if m.PublishGameStartFn != nil {
-		m.PublishGameStartFn(deviceIDs, gameID)
+		m.PublishGameStartFn(deviceIDs.DeviceID, gameID)
 	}
 }
 
@@ -364,24 +364,24 @@ func (m *MockDeviceUseCasePort) ListAvailable(ctx context.Context) ([]domain.Dev
 // ── GameUseCasePort ──
 
 type MockGameUseCasePort struct {
-	CreateGameFn      func(ctx context.Context, settings *domain.GameSettings) (*domain.Game, error)
-	GetGameFn         func(ctx context.Context, id string) (*domain.Game, error)
-	ListGamesFn       func(ctx context.Context) ([]domain.Game, error)
-	GetGameFullFn     func(ctx context.Context, gameID string) (*domain.GameFull, error)
-	StartGameFn       func(ctx context.Context, gameID string) (*domain.Game, []string, error)
-	EndGameFn         func(ctx context.Context, gameID string) (*domain.Game, []string, error)
-	UpdateSettingsFn  func(ctx context.Context, gameID string, settings domain.GameSettings) (*domain.Game, error)
-	AddTeamFn         func(ctx context.Context, gameID, name, color string) (*domain.Team, error)
-	ListTeamsFn       func(ctx context.Context, gameID string) ([]domain.Team, error)
-	RemoveTeamFn      func(ctx context.Context, gameID, teamID string) error
-	AddPlayerFn       func(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*domain.Player, error)
-	RemovePlayerFn    func(ctx context.Context, gameID, playerID string) error
-	ListPlayersFn     func(ctx context.Context, gameID string) ([]domain.Player, error)
-	GetLeaderboardFn  func(ctx context.Context, gameID string) ([]domain.Player, error)
-	ListEventsFn      func(ctx context.Context, gameID string) ([]domain.GameEvent, error)
+	CreateGameFn       func(ctx context.Context, settings *domain.GameSettings) (*domain.Game, error)
+	GetGameFn          func(ctx context.Context, id string) (*domain.Game, error)
+	ListGamesFn        func(ctx context.Context) ([]domain.Game, error)
+	GetGameFullFn      func(ctx context.Context, gameID string) (*domain.GameFull, error)
+	StartGameFn        func(ctx context.Context, gameID string) (*domain.Game, []string, error)
+	EndGameFn          func(ctx context.Context, gameID string) (*domain.Game, []string, error)
+	UpdateSettingsFn   func(ctx context.Context, gameID string, settings domain.GameSettings) (*domain.Game, error)
+	AddTeamFn          func(ctx context.Context, gameID, name, color string) (*domain.Team, error)
+	ListTeamsFn        func(ctx context.Context, gameID string) ([]domain.Team, error)
+	RemoveTeamFn       func(ctx context.Context, gameID, teamID string) error
+	AddPlayerFn        func(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*domain.Player, error)
+	RemovePlayerFn     func(ctx context.Context, gameID, playerID string) error
+	ListPlayersFn      func(ctx context.Context, gameID string) ([]domain.Player, error)
+	GetLeaderboardFn   func(ctx context.Context, gameID string) ([]domain.Player, error)
+	ListEventsFn       func(ctx context.Context, gameID string) ([]domain.GameEvent, error)
 	UpdatePlayerTeamFn func(ctx context.Context, playerID string, teamID *string) error
-	ShouldAutoEndFn   func(ctx context.Context, gameID string) (bool, error)
-	RemainingTimeFn   func(game *domain.Game) int
+	ShouldAutoEndFn    func(ctx context.Context, gameID string) (bool, error)
+	RemainingTimeFn    func(game *domain.Game) int
 	GetPlayerSessionFn func(ctx context.Context, code string) (*domain.PlayerSession, error)
 }
 

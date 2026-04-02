@@ -65,13 +65,23 @@ type Game struct {
 	EndedAt   *time.Time
 }
 
+// GameType defines the game mode.
+// 0 = deathmatch, 1 = team deathmatch
+type GameType int
+
+const (
+	GameTypeDeathmatch     GameType = 0
+	GameTypeTeamDeathmatch GameType = 1
+)
+
 type GameSettings struct {
-	RespawnDelay    int  `json:"respawn_delay"`     // seconds
-	GameDuration    int  `json:"game_duration"`     // seconds, 0 = unlimited
-	FriendlyFire    bool `json:"friendly_fire"`
-	MaxPlayers      int  `json:"max_players"`
-	ScorePerKill    int  `json:"score_per_kill"`
-	KillsPerUpgrade int  `json:"kills_per_upgrade"` // kills needed per weapon upgrade (0 = disabled)
+	RespawnDelay    int      `json:"respawn_delay"` // seconds
+	GameDuration    int      `json:"game_duration"` // seconds, 0 = unlimited
+	FriendlyFire    bool     `json:"friendly_fire"`
+	MaxPlayers      int      `json:"max_players"`
+	ScorePerKill    int      `json:"score_per_kill"`
+	KillsPerUpgrade int      `json:"kills_per_upgrade"` // kills needed per weapon upgrade (0 = disabled)
+	TypeOfGame      GameType `json:"type_of_the_game"`  // 0 = deathmatch, 1 = team deathmatch
 }
 
 func DefaultGameSettings() GameSettings {
@@ -107,6 +117,7 @@ func (s GameSettings) Validate() error {
 
 type Team struct {
 	ID     string
+	Number int
 	GameID string
 	Name   string
 	Color  string
@@ -122,9 +133,9 @@ type Player struct {
 	Kills       int
 	Deaths      int
 	IsAlive     bool
-	KillStreak  int // consecutive kills without dying (resets on death)
-	WeaponLevel int // current weapon tier (resets on death)
-	ShotsFired  int // total shots fired this game (never resets)
+	KillStreak  int    // consecutive kills without dying (resets on death)
+	WeaponLevel int    // current weapon tier (resets on death)
+	ShotsFired  int    // total shots fired this game (never resets)
 	SessionCode string // unique 6-char PIN for mobile app access
 }
 
@@ -161,6 +172,7 @@ type HitResult struct {
 // ReconnectInfo is returned when a reconnecting device has an active game session.
 type ReconnectInfo struct {
 	Player        Player
+	TeamNumber    *int // nil if unassigned
 	Game          Game
 	RemainingTime int // seconds remaining (-1 = unlimited)
 }
