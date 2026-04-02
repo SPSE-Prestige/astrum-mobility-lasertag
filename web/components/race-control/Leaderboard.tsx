@@ -13,7 +13,7 @@ export const Leaderboard = ({ players, gameMode, language }: LeaderboardProps) =
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
       <p className="mb-3 text-xs uppercase tracking-[0.2em] text-zinc-500">{language === "cs" ? "Průběžné pořadí" : "Live Leaderboard"}</p>
-      <div className="overflow-hidden rounded-lg border border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border-zinc-800">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-900 text-xs uppercase tracking-[0.14em] text-zinc-500">
             <tr>
