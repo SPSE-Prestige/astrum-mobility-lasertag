@@ -36,6 +36,47 @@ func (r *PlayerRepo) GetByGameAndDevice(ctx context.Context, gameID, deviceID st
 	))
 }
 
+// FindActivePlayerByDevice finds a player with the given device in a running game.
+func (r *PlayerRepo) FindActivePlayerByDevice(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error) {
+	row := getExecutor(ctx, r.db).QueryRowContext(ctx,
+		`SELECT p.id, p.game_id, p.team_id, p.device_id, p.nickname, p.score, p.kills, p.deaths, p.is_alive, p.kill_streak, p.weapon_level,
+		        g.id, g.code, g.status, g.respawn_delay, g.game_duration, g.friendly_fire, g.max_players, g.score_per_kill, g.kills_per_upgrade,
+		        g.created_at, g.started_at, g.ended_at
+		 FROM players p
+		 JOIN games g ON p.game_id = g.id
+		 WHERE p.device_id = $1 AND g.status = $2
+		 LIMIT 1`, deviceID, domain.GameRunning,
+	)
+
+	p := &domain.Player{}
+	g := &domain.Game{}
+	var teamID sql.NullString
+	var startedAt, endedAt sql.NullTime
+
+	err := row.Scan(
+		&p.ID, &p.GameID, &teamID, &p.DeviceID, &p.Nickname, &p.Score, &p.Kills, &p.Deaths, &p.IsAlive, &p.KillStreak, &p.WeaponLevel,
+		&g.ID, &g.Code, &g.Status, &g.Settings.RespawnDelay, &g.Settings.GameDuration, &g.Settings.FriendlyFire, &g.Settings.MaxPlayers, &g.Settings.ScorePerKill, &g.Settings.KillsPerUpgrade,
+		&g.CreatedAt, &startedAt, &endedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, nil // not in any active game
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("find active player by device %s: %w", deviceID, err)
+	}
+
+	if teamID.Valid {
+		p.TeamID = &teamID.String
+	}
+	if startedAt.Valid {
+		g.StartedAt = &startedAt.Time
+	}
+	if endedAt.Valid {
+		g.EndedAt = &endedAt.Time
+	}
+	return p, g, nil
+}
+
 func (r *PlayerRepo) ListByGame(ctx context.Context, gameID string) ([]domain.Player, error) {
 	rows, err := getExecutor(ctx, r.db).QueryContext(ctx,
 		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level FROM players WHERE game_id = $1 ORDER BY score DESC`, gameID,

@@ -49,7 +49,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// Use cases
 	authUC := usecase.NewAuthUseCase(userRepo, sessionRepo, cfg.SessionTTL)
-	deviceUC := usecase.NewDeviceUseCase(deviceRepo)
+	deviceUC := usecase.NewDeviceUseCase(deviceRepo, playerRepo)
 	gameUC := usecase.NewGameUseCase(gameRepo, teamRepo, playerRepo, deviceRepo, eventRepo, txMgr)
 	hitUC := usecase.NewHitUseCase(gameRepo, playerRepo, eventRepo, txMgr)
 

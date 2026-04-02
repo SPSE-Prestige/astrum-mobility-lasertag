@@ -124,6 +124,10 @@ func (c *Client) handleRegister(ctx context.Context, deviceID string) {
 		return
 	}
 	slog.Info("mqtt device registered", "device_id", deviceID)
+
+	// Check if device was in an active game and send state back
+	c.tryReconnect(ctx, deviceID)
+
 	c.broadcast.Broadcast(map[string]any{
 		"type":   "device_registered",
 		"device": device,
@@ -134,6 +138,33 @@ func (c *Client) handleHeartbeat(ctx context.Context, deviceID string) {
 	if err := c.deviceUC.Heartbeat(ctx, deviceID); err != nil {
 		slog.Error("mqtt heartbeat failed", "device_id", deviceID, "error", err)
 	}
+}
+
+// tryReconnect checks if a device has an active game session and re-sends game state.
+func (c *Client) tryReconnect(ctx context.Context, deviceID string) {
+	info, err := c.deviceUC.Reconnect(ctx, deviceID)
+	if err != nil {
+		slog.Error("mqtt reconnect check failed", "device_id", deviceID, "error", err)
+		return
+	}
+	if info == nil {
+		return // device not in any active game
+	}
+
+	slog.Info("mqtt sending game state to reconnected device",
+		"device_id", deviceID,
+		"game_id", info.Game.ID,
+		"player_id", info.Player.ID,
+	)
+
+	c.PublishGameState(deviceID, info)
+
+	c.broadcast.Broadcast(map[string]any{
+		"type":      "device_reconnected",
+		"game_id":   info.Game.ID,
+		"device_id": deviceID,
+		"player_id": info.Player.ID,
+	})
 }
 
 type hitEvent struct {
@@ -255,4 +286,19 @@ func (c *Client) PublishGameEnd(deviceIDs []string) {
 			"action": "game_end",
 		})
 	}
+}
+
+// PublishGameState sends full game state to a reconnecting device.
+func (c *Client) PublishGameState(deviceID string, info *domain.ReconnectInfo) {
+	c.SendCommand(deviceID, map[string]any{
+		"action":         "game_rejoin",
+		"game_id":        info.Game.ID,
+		"is_alive":       info.Player.IsAlive,
+		"kills":          info.Player.Kills,
+		"deaths":         info.Player.Deaths,
+		"score":          info.Player.Score,
+		"weapon_level":   info.Player.WeaponLevel,
+		"kill_streak":    info.Player.KillStreak,
+		"remaining_time": info.RemainingTime,
+	})
 }

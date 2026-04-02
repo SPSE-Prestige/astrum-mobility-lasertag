@@ -48,6 +48,8 @@ type PlayerRepository interface {
 	Create(ctx context.Context, p *Player) error
 	GetByID(ctx context.Context, id string) (*Player, error)
 	GetByGameAndDevice(ctx context.Context, gameID, deviceID string) (*Player, error)
+	// FindActivePlayerByDevice finds a player with this device in a running game (if any).
+	FindActivePlayerByDevice(ctx context.Context, deviceID string) (*Player, *Game, error)
 	ListByGame(ctx context.Context, gameID string) ([]Player, error)
 	ListByTeam(ctx context.Context, teamID string) ([]Player, error)
 	Update(ctx context.Context, p *Player) error
@@ -97,6 +99,9 @@ type AuthUseCasePort interface {
 type DeviceUseCasePort interface {
 	Register(ctx context.Context, deviceID string) (*Device, error)
 	Heartbeat(ctx context.Context, deviceID string) error
+	// Reconnect checks if a device has an active game session and restores its state.
+	// Returns nil info if the device is not in any running game.
+	Reconnect(ctx context.Context, deviceID string) (*ReconnectInfo, error)
 	MarkOffline(ctx context.Context, timeout time.Duration) ([]string, error)
 	ListAll(ctx context.Context) ([]Device, error)
 	ListAvailable(ctx context.Context) ([]Device, error)
@@ -137,6 +142,8 @@ type MQTTPublisher interface {
 	SendCommand(deviceID string, command any)
 	PublishGameStart(deviceIDs []string, gameID string)
 	PublishGameEnd(deviceIDs []string)
+	// PublishGameState sends current game state to a single reconnecting device.
+	PublishGameState(deviceID string, info *ReconnectInfo)
 }
 
 // WSBroadcaster defines WebSocket broadcasting.

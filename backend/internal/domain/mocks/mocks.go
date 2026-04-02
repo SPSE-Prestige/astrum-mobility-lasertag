@@ -148,16 +148,17 @@ func (m *MockTeamRepository) Delete(ctx context.Context, id string) error {
 // ── PlayerRepository ──
 
 type MockPlayerRepository struct {
-	CreateFn             func(ctx context.Context, p *domain.Player) error
-	GetByIDFn            func(ctx context.Context, id string) (*domain.Player, error)
-	GetByGameAndDeviceFn func(ctx context.Context, gameID, deviceID string) (*domain.Player, error)
-	ListByGameFn         func(ctx context.Context, gameID string) ([]domain.Player, error)
-	ListByTeamFn         func(ctx context.Context, teamID string) ([]domain.Player, error)
-	UpdateFn             func(ctx context.Context, p *domain.Player) error
-	DeleteFn             func(ctx context.Context, id string) error
-	KillPlayerFn         func(ctx context.Context, playerID string) (bool, error)
-	AddKillScoreFn       func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
-	RespawnFn            func(ctx context.Context, playerID string) error
+	CreateFn                      func(ctx context.Context, p *domain.Player) error
+	GetByIDFn                     func(ctx context.Context, id string) (*domain.Player, error)
+	GetByGameAndDeviceFn          func(ctx context.Context, gameID, deviceID string) (*domain.Player, error)
+	FindActivePlayerByDeviceFn    func(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error)
+	ListByGameFn                  func(ctx context.Context, gameID string) ([]domain.Player, error)
+	ListByTeamFn                  func(ctx context.Context, teamID string) ([]domain.Player, error)
+	UpdateFn                      func(ctx context.Context, p *domain.Player) error
+	DeleteFn                      func(ctx context.Context, id string) error
+	KillPlayerFn                  func(ctx context.Context, playerID string) (bool, error)
+	AddKillScoreFn                func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
+	RespawnFn                     func(ctx context.Context, playerID string) error
 }
 
 func (m *MockPlayerRepository) Create(ctx context.Context, p *domain.Player) error {
@@ -170,6 +171,13 @@ func (m *MockPlayerRepository) GetByID(ctx context.Context, id string) (*domain.
 
 func (m *MockPlayerRepository) GetByGameAndDevice(ctx context.Context, gameID, deviceID string) (*domain.Player, error) {
 	return m.GetByGameAndDeviceFn(ctx, gameID, deviceID)
+}
+
+func (m *MockPlayerRepository) FindActivePlayerByDevice(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error) {
+	if m.FindActivePlayerByDeviceFn != nil {
+		return m.FindActivePlayerByDeviceFn(ctx, deviceID)
+	}
+	return nil, nil, nil
 }
 
 func (m *MockPlayerRepository) ListByGame(ctx context.Context, gameID string) ([]domain.Player, error) {
@@ -232,9 +240,10 @@ func (m *MockTxManager) WithTx(ctx context.Context, fn func(ctx context.Context)
 // ── MQTTPublisher ──
 
 type MockMQTTPublisher struct {
-	SendCommandFn      func(deviceID string, command any)
-	PublishGameStartFn func(deviceIDs []string, gameID string)
-	PublishGameEndFn   func(deviceIDs []string)
+	SendCommandFn       func(deviceID string, command any)
+	PublishGameStartFn  func(deviceIDs []string, gameID string)
+	PublishGameEndFn    func(deviceIDs []string)
+	PublishGameStateFn  func(deviceID string, info *domain.ReconnectInfo)
 }
 
 func (m *MockMQTTPublisher) SendCommand(deviceID string, command any) {
@@ -252,6 +261,12 @@ func (m *MockMQTTPublisher) PublishGameStart(deviceIDs []string, gameID string) 
 func (m *MockMQTTPublisher) PublishGameEnd(deviceIDs []string) {
 	if m.PublishGameEndFn != nil {
 		m.PublishGameEndFn(deviceIDs)
+	}
+}
+
+func (m *MockMQTTPublisher) PublishGameState(deviceID string, info *domain.ReconnectInfo) {
+	if m.PublishGameStateFn != nil {
+		m.PublishGameStateFn(deviceID, info)
 	}
 }
 
@@ -297,6 +312,7 @@ func (m *MockAuthUseCasePort) CleanupExpiredSessions(ctx context.Context) error 
 type MockDeviceUseCasePort struct {
 	RegisterFn      func(ctx context.Context, deviceID string) (*domain.Device, error)
 	HeartbeatFn     func(ctx context.Context, deviceID string) error
+	ReconnectFn     func(ctx context.Context, deviceID string) (*domain.ReconnectInfo, error)
 	MarkOfflineFn   func(ctx context.Context, timeout time.Duration) ([]string, error)
 	ListAllFn       func(ctx context.Context) ([]domain.Device, error)
 	ListAvailableFn func(ctx context.Context) ([]domain.Device, error)
@@ -308,6 +324,13 @@ func (m *MockDeviceUseCasePort) Register(ctx context.Context, deviceID string) (
 
 func (m *MockDeviceUseCasePort) Heartbeat(ctx context.Context, deviceID string) error {
 	return m.HeartbeatFn(ctx, deviceID)
+}
+
+func (m *MockDeviceUseCasePort) Reconnect(ctx context.Context, deviceID string) (*domain.ReconnectInfo, error) {
+	if m.ReconnectFn != nil {
+		return m.ReconnectFn(ctx, deviceID)
+	}
+	return nil, nil
 }
 
 func (m *MockDeviceUseCasePort) MarkOffline(ctx context.Context, timeout time.Duration) ([]string, error) {
