@@ -101,7 +101,7 @@ export const useGameData = () => {
           return;
         }
 
-        const isRunning = full.game.status === "started";
+        const isRunning = full.game.status === "running" || full.game.status === "started";
         let raceTimeSeconds = config.durationMinutes * 60;
         if (isRunning && full.game.started_at && full.game.settings.game_duration > 0) {
           const elapsed = (Date.now() - new Date(full.game.started_at).getTime()) / 1000;
