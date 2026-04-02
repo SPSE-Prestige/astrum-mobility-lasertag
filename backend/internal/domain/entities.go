@@ -155,3 +155,10 @@ type HitResult struct {
 	WeaponLevel    int  // attacker's current weapon level after this kill
 	KillStreak     int  // attacker's current kill streak after this kill
 }
+
+// ReconnectInfo is returned when a reconnecting device has an active game session.
+type ReconnectInfo struct {
+	Player        Player
+	Game          Game
+	RemainingTime int // seconds remaining (-1 = unlimited)
+}

@@ -67,8 +67,10 @@ func (r *DeviceRepo) UpdateStatus(ctx context.Context, deviceID string, status d
 }
 
 func (r *DeviceRepo) UpdateLastSeen(ctx context.Context, deviceID string) error {
+	// Only set status to 'online' if it was 'offline'. Preserve 'in_game' status.
 	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
-		`UPDATE devices SET last_seen = $1, status = $2 WHERE device_id = $3`, time.Now(), domain.DeviceOnline, deviceID,
+		`UPDATE devices SET last_seen = $1, status = CASE WHEN status = $2 THEN $3 ELSE status END WHERE device_id = $4`,
+		time.Now(), domain.DeviceOffline, domain.DeviceOnline, deviceID,
 	)
 	return err
 }
