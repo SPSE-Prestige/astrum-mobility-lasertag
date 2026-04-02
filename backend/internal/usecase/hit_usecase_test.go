@@ -253,8 +253,8 @@ func TestProcessHit_FriendlyFireAllowed(t *testing.T) {
 		KillPlayerFn: func(_ context.Context, _ string) (bool, error) {
 			return true, nil
 		},
-		AddKillScoreFn: func(_ context.Context, _ string, _, _ int) (*domain.KillScoreResult, error) {
-			return &domain.KillScoreResult{KillStreak: 1, WeaponLevel: 0}, nil
+		SubKillScoreFn: func(_ context.Context, _ string, _ int) error {
+			return nil
 		},
 	}
 	events := &mocks.MockEventRepository{
@@ -274,13 +274,16 @@ func TestProcessHit_FriendlyFireAllowed(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !result.Kill {
-		t.Error("expected Kill to be true with friendly fire allowed")
+		t.Error("expected Kill to be true")
 	}
-	if result.AttackerScore != 300 {
-		t.Errorf("expected AttackerScore 300, got %d", result.AttackerScore)
+	if !result.FriendlyKill {
+		t.Error("expected FriendlyKill to be true")
 	}
-	if result.AttackerKills != 3 {
-		t.Errorf("expected AttackerKills 3, got %d", result.AttackerKills)
+	if result.AttackerScore != 100 {
+		t.Errorf("expected AttackerScore 100 (200 - 100 penalty), got %d", result.AttackerScore)
+	}
+	if result.AttackerKills != 1 {
+		t.Errorf("expected AttackerKills 1 (2 - 1 penalty), got %d", result.AttackerKills)
 	}
 }
 

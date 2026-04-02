@@ -55,8 +55,9 @@ func (uc *HitUseCase) ProcessHit(ctx context.Context, gameID, attackerDeviceID, 
 		return nil, domain.ErrPlayerDead
 	}
 
-	// Friendly fire check
-	if !game.Settings.FriendlyFire && attacker.TeamID != nil && victim.TeamID != nil && *attacker.TeamID == *victim.TeamID {
+	// Friendly fire detection
+	isFriendlyFire := attacker.TeamID != nil && victim.TeamID != nil && *attacker.TeamID == *victim.TeamID
+	if isFriendlyFire && !game.Settings.FriendlyFire {
 		return nil, domain.ErrFriendlyFire
 	}
 
@@ -65,7 +66,6 @@ func (uc *HitUseCase) ProcessHit(ctx context.Context, gameID, attackerDeviceID, 
 	var result *domain.HitResult
 
 	err = uc.txMgr.WithTx(ctx, func(txCtx context.Context) error {
-		// Atomically kill victim (returns false if already dead = duplicate prevention)
 		killed, err := uc.players.KillPlayer(txCtx, victim.ID)
 		if err != nil {
 			return fmt.Errorf("kill victim: %w", err)
@@ -74,7 +74,45 @@ func (uc *HitUseCase) ProcessHit(ctx context.Context, gameID, attackerDeviceID, 
 			return domain.ErrPlayerDead
 		}
 
-		// Atomically add kill + score + streak to attacker (handles weapon upgrade)
+		if isFriendlyFire {
+			// Penalty: -1 kill, -scorePerKill, reset streak
+			if err := uc.players.SubKillScore(txCtx, attacker.ID, scorePerKill); err != nil {
+				return fmt.Errorf("friendly fire penalty: %w", err)
+			}
+
+			event := &domain.GameEvent{
+				ID:     uuid.New().String(),
+				GameID: gameID,
+				Type:   "teamkill",
+				Payload: map[string]any{
+					"attacker_id":       attacker.ID,
+					"attacker_nickname": attacker.Nickname,
+					"victim_id":         victim.ID,
+					"victim_nickname":   victim.Nickname,
+				},
+				Timestamp: time.Now(),
+			}
+			if err := uc.events.Create(txCtx, event); err != nil {
+				return fmt.Errorf("create teamkill event: %w", err)
+			}
+
+			newScore := attacker.Score - scorePerKill
+			if newScore < 0 {
+				newScore = 0
+			}
+			newKills := attacker.Kills - 1
+			if newKills < 0 {
+				newKills = 0
+			}
+			result = &domain.HitResult{
+				Kill: true, FriendlyKill: true,
+				AttackerID: attacker.ID, VictimID: victim.ID,
+				AttackerScore: newScore, AttackerKills: newKills,
+			}
+			return nil
+		}
+
+		// Normal kill
 		streakResult, err := uc.players.AddKillScore(txCtx, attacker.ID, scorePerKill, killsPerUpgrade)
 		if err != nil {
 			return fmt.Errorf("add kill score: %w", err)

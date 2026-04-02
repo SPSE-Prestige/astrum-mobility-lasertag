@@ -158,6 +158,7 @@ type MockPlayerRepository struct {
 	DeleteFn                   func(ctx context.Context, id string) error
 	KillPlayerFn               func(ctx context.Context, playerID string) (bool, error)
 	AddKillScoreFn             func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
+	SubKillScoreFn             func(ctx context.Context, playerID string, score int) error
 	RespawnFn                  func(ctx context.Context, playerID string) error
 	IncrementShotsFiredFn      func(ctx context.Context, playerID string) error
 	GetBySessionCodeFn         func(ctx context.Context, code string) (*domain.Player, error)
@@ -204,6 +205,13 @@ func (m *MockPlayerRepository) KillPlayer(ctx context.Context, playerID string) 
 
 func (m *MockPlayerRepository) AddKillScore(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error) {
 	return m.AddKillScoreFn(ctx, playerID, score, killsPerUpgrade)
+}
+
+func (m *MockPlayerRepository) SubKillScore(ctx context.Context, playerID string, score int) error {
+	if m.SubKillScoreFn != nil {
+		return m.SubKillScoreFn(ctx, playerID, score)
+	}
+	return nil
 }
 
 func (m *MockPlayerRepository) Respawn(ctx context.Context, playerID string) error {

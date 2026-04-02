@@ -157,6 +157,19 @@ func (r *PlayerRepo) AddKillScore(ctx context.Context, playerID string, score, k
 	return &result, nil
 }
 
+// SubKillScore atomically decrements kills and score, resets streak (friendly fire penalty).
+func (r *PlayerRepo) SubKillScore(ctx context.Context, playerID string, score int) error {
+	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
+		`UPDATE players SET
+			kills = GREATEST(kills - 1, 0),
+			score = GREATEST(score - $1, 0),
+			kill_streak = 0
+		 WHERE id = $2`,
+		score, playerID,
+	)
+	return err
+}
+
 // Respawn atomically sets is_alive=true.
 func (r *PlayerRepo) Respawn(ctx context.Context, playerID string) error {
 	_, err := getExecutor(ctx, r.db).ExecContext(ctx,

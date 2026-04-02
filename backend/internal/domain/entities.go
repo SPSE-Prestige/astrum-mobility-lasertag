@@ -159,13 +159,14 @@ type GameFull struct {
 // HitResult carries the outcome of a hit event.
 type HitResult struct {
 	Kill           bool
+	FriendlyKill   bool
 	AttackerID     string
 	VictimID       string
 	AttackerScore  int
 	AttackerKills  int
-	WeaponUpgraded bool // true if this kill triggered a weapon upgrade
-	WeaponLevel    int  // attacker's current weapon level after this kill
-	KillStreak     int  // attacker's current kill streak after this kill
+	WeaponUpgraded bool
+	WeaponLevel    int
+	KillStreak     int
 }
 
 // ReconnectInfo is returned when a reconnecting device has an active game session.
