@@ -2,11 +2,6 @@
 .git
 .gitignore
 
-# Documentation
-audit.md
-docs/
-README.md
-
 # IDE
 .vscode/
 .idea/
