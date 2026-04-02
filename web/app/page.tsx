@@ -257,6 +257,20 @@ export default function Home() {
                         className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
                       />
                     </label>
+                    <label className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                      {language === "cs" ? "Killů na upgrade zbraně" : "Kills Per Weapon Upgrade"}
+                      <input
+                        type="number"
+                        min={0}
+                        max={50}
+                        value={config.killsPerUpgrade}
+                        onChange={(e) => updateConfig({ ...config, killsPerUpgrade: Number(e.target.value) })}
+                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+                      />
+                      <span className="mt-1 block text-[10px] text-zinc-600">
+                        {language === "cs" ? "0 = upgrade zbraně vypnut" : "0 = weapon upgrades disabled"}
+                      </span>
+                    </label>
                   </div>
                 </article>
               </div>
@@ -345,13 +359,13 @@ export default function Home() {
                     <h4 className="text-lg font-semibold">{r.team}</h4>
                     <div className="mt-3 space-y-2 text-sm">
                       <p>
-                        {language === "cs" ? "Skóre" : "Score"}: <span className="text-[#ff0000]">{teamResult.score}</span>
+                        {language === "cs" ? "Skóre" : "Score"}: <span className="text-[#ff0000]">{r.score}</span>
                       </p>
                       <p>
-                        {language === "cs" ? "Přesnost" : "Accuracy"}: <span className="text-[#00ff00]">{teamResult.accuracy}%</span>
+                        Kills: <span className="text-[#00ff00]">{r.kills}</span>
                       </p>
                       <p>
-                        {language === "cs" ? "Udělené poškození" : "Damage Dealt"}: <span className="text-[#ff0000]">{teamResult.damageDealt}</span>
+                        Deaths: <span className="text-[#ff0000]">{r.deaths}</span>
                       </p>
                     </div>
                   </article>

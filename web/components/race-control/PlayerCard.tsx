@@ -1,4 +1,4 @@
-import { Crosshair, Skull, Target } from "lucide-react";
+import { Crosshair, Skull, Swords, Target, Zap } from "lucide-react";
 import type { Player } from "@/types/game";
 import type { Language } from "@/types/i18n";
 
@@ -26,18 +26,26 @@ export const PlayerCard = ({ player, language }: PlayerCardProps) => {
           <h4 className="text-sm font-semibold text-zinc-100">{player.name}</h4>
           <p className="text-xs text-zinc-500">{player.team}</p>
         </div>
-        <span
-          className={`rounded-full border px-2 py-1 text-xs uppercase tracking-[0.15em] ${
-            isAlive
-              ? "border-[#00ff00]/50 bg-[#00ff00]/10 text-[#00ff00]"
-              : "border-[#ff0000]/50 bg-[#ff0000]/10 text-[#ff0000]"
-          }`}
-        >
-          {statusLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          {player.weaponLevel > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-400">
+              <Zap className="h-3 w-3" />
+              LVL {player.weaponLevel}
+            </span>
+          )}
+          <span
+            className={`rounded-full border px-2 py-1 text-xs uppercase tracking-[0.15em] ${
+              isAlive
+                ? "border-[#00ff00]/50 bg-[#00ff00]/10 text-[#00ff00]"
+                : "border-[#ff0000]/50 bg-[#ff0000]/10 text-[#ff0000]"
+            }`}
+          >
+            {statusLabel}
+          </span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-xs text-zinc-300">
+      <div className="grid grid-cols-4 gap-2 text-xs text-zinc-300">
         <div className="rounded-md border border-zinc-800 bg-black/40 p-2">
           <p className="inline-flex items-center gap-1 text-zinc-500">
             <Crosshair className="h-3.5 w-3.5" /> Kills
@@ -55,6 +63,12 @@ export const PlayerCard = ({ player, language }: PlayerCardProps) => {
             <Target className="h-3.5 w-3.5" /> {language === "cs" ? "Skóre" : "Score"}
           </p>
           <p className="mt-1 text-sm font-semibold">{player.score}</p>
+        </div>
+        <div className="rounded-md border border-zinc-800 bg-black/40 p-2">
+          <p className="inline-flex items-center gap-1 text-zinc-500">
+            <Swords className="h-3.5 w-3.5" /> Streak
+          </p>
+          <p className="mt-1 text-sm font-semibold text-amber-400">{player.killStreak}</p>
         </div>
       </div>
     </article>

@@ -9,6 +9,7 @@ export interface GameConfig {
   friendlyFire: boolean;
   respawnDelay: number;
   maxPlayers: number;
+  killsPerUpgrade: number;
 }
 
 export interface Player {
@@ -21,6 +22,8 @@ export interface Player {
   kills: number;
   deaths: number;
   score: number;
+  killStreak: number;
+  weaponLevel: number;
 }
 
 export interface Team {

@@ -17,6 +17,8 @@ export interface GameSettingsDTO {
   game_duration: number;
   friendly_fire: boolean;
   max_players: number;
+  score_per_kill: number;
+  kills_per_upgrade: number;
 }
 
 export interface GameResponse {
@@ -46,6 +48,8 @@ export interface PlayerResponse {
   kills: number;
   deaths: number;
   is_alive: boolean;
+  kill_streak: number;
+  weapon_level: number;
 }
 
 export interface GameFullResponse {

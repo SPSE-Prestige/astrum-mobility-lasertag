@@ -33,6 +33,7 @@ const defaultConfig: GameConfig = {
   friendlyFire: false,
   respawnDelay: 5,
   maxPlayers: 20,
+  killsPerUpgrade: 3,
 };
 
 const initialState: GameState = {
@@ -68,6 +69,8 @@ function toPlayer(p: PlayerResponse, teams: TeamResponse[]): Player {
     kills: p.kills,
     deaths: p.deaths,
     score: p.score,
+    killStreak: p.kill_streak ?? 0,
+    weaponLevel: p.weapon_level ?? 0,
   };
 }
 
@@ -84,15 +87,27 @@ function buildKillFeed(events: EventResponse[]): KillFeedEvent[] {
     .filter((e) => e.type === "kill")
     .reverse()
     .slice(0, 20)
-    .map((e) => ({
-      id: e.id,
-      timestamp: new Date(e.timestamp).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
-      message: `${(e.payload?.attacker_nickname as string) ?? "?"} → ${(e.payload?.victim_nickname as string) ?? "?"}`,
-    }));
+    .map((e) => {
+      const attacker = (e.payload?.attacker_nickname as string) ?? "?";
+      const victim = (e.payload?.victim_nickname as string) ?? "?";
+      const weaponUpgraded = e.payload?.weapon_upgraded === true;
+      const weaponLevel = (e.payload?.weapon_level as number) ?? 0;
+
+      let message = `${attacker} → ${victim}`;
+      if (weaponUpgraded) {
+        message += ` ⚡ LVL ${weaponLevel}`;
+      }
+
+      return {
+        id: e.id,
+        timestamp: new Date(e.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        message,
+      };
+    });
 }
 
 function calcTeamResults(players: Player[], mode: GameMode): TeamResult[] {
@@ -291,6 +306,8 @@ export const useGameData = () => {
         game_duration: config.durationMinutes * 60,
         friendly_fire: config.friendlyFire,
         max_players: config.maxPlayers,
+        score_per_kill: 100,
+        kills_per_upgrade: config.killsPerUpgrade,
       });
 
       let teams: TeamResponse[] = [];
