@@ -18,7 +18,7 @@ func (r *PlayerRepo) Create(ctx context.Context, p *domain.Player) error {
 	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
 		`INSERT INTO players (id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level, shots_fired, session_code)
 		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-		p.ID, p.GameID, nilIfEmpty(p.TeamID), p.DeviceID, p.Nickname,
+		p.ID, p.GameID, nilIfEmptyInt(p.TeamID), p.DeviceID, p.Nickname,
 		p.Score, p.Kills, p.Deaths, p.IsAlive, p.KillStreak, p.WeaponLevel, p.ShotsFired, nilIfEmptyStr(p.SessionCode),
 	)
 	return err
@@ -50,7 +50,8 @@ func (r *PlayerRepo) FindActivePlayerByDevice(ctx context.Context, deviceID stri
 
 	p := &domain.Player{}
 	g := &domain.Game{}
-	var teamID, sessionCode sql.NullString
+	var teamID sql.NullInt64
+	var sessionCode sql.NullString
 	var startedAt, endedAt sql.NullTime
 	var settingsJSON []byte
 
@@ -67,7 +68,8 @@ func (r *PlayerRepo) FindActivePlayerByDevice(ctx context.Context, deviceID stri
 
 	_ = json.Unmarshal(settingsJSON, &g.Settings)
 	if teamID.Valid {
-		p.TeamID = &teamID.String
+		v := int(teamID.Int64)
+		p.TeamID = &v
 	}
 	if sessionCode.Valid {
 		p.SessionCode = sessionCode.String
@@ -92,7 +94,7 @@ func (r *PlayerRepo) ListByGame(ctx context.Context, gameID string) ([]domain.Pl
 	return r.scanPlayers(rows)
 }
 
-func (r *PlayerRepo) ListByTeam(ctx context.Context, teamID string) ([]domain.Player, error) {
+func (r *PlayerRepo) ListByTeam(ctx context.Context, teamID int) ([]domain.Player, error) {
 	rows, err := getExecutor(ctx, r.db).QueryContext(ctx,
 		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level, shots_fired, session_code FROM players WHERE team_id = $1 ORDER BY score DESC`, teamID,
 	)
@@ -106,7 +108,7 @@ func (r *PlayerRepo) ListByTeam(ctx context.Context, teamID string) ([]domain.Pl
 func (r *PlayerRepo) Update(ctx context.Context, p *domain.Player) error {
 	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
 		`UPDATE players SET team_id=$1, nickname=$2, score=$3, kills=$4, deaths=$5, is_alive=$6, kill_streak=$7, weapon_level=$8, shots_fired=$9, session_code=$10 WHERE id=$11`,
-		nilIfEmpty(p.TeamID), p.Nickname, p.Score, p.Kills, p.Deaths, p.IsAlive, p.KillStreak, p.WeaponLevel, p.ShotsFired, nilIfEmptyStr(p.SessionCode), p.ID,
+		nilIfEmptyInt(p.TeamID), p.Nickname, p.Score, p.Kills, p.Deaths, p.IsAlive, p.KillStreak, p.WeaponLevel, p.ShotsFired, nilIfEmptyStr(p.SessionCode), p.ID,
 	)
 	return err
 }
@@ -175,7 +177,8 @@ func (r *PlayerRepo) IncrementShotsFired(ctx context.Context, playerID string) e
 
 func (r *PlayerRepo) scanPlayer(row *sql.Row) (*domain.Player, error) {
 	p := &domain.Player{}
-	var teamID, sessionCode sql.NullString
+	var teamID sql.NullInt64
+	var sessionCode sql.NullString
 	err := row.Scan(&p.ID, &p.GameID, &teamID, &p.DeviceID, &p.Nickname,
 		&p.Score, &p.Kills, &p.Deaths, &p.IsAlive, &p.KillStreak, &p.WeaponLevel, &p.ShotsFired, &sessionCode)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -185,7 +188,8 @@ func (r *PlayerRepo) scanPlayer(row *sql.Row) (*domain.Player, error) {
 		return nil, err
 	}
 	if teamID.Valid {
-		p.TeamID = &teamID.String
+		v := int(teamID.Int64)
+		p.TeamID = &v
 	}
 	if sessionCode.Valid {
 		p.SessionCode = sessionCode.String
@@ -197,13 +201,15 @@ func (r *PlayerRepo) scanPlayers(rows *sql.Rows) ([]domain.Player, error) {
 	var players []domain.Player
 	for rows.Next() {
 		var p domain.Player
-		var teamID, sessionCode sql.NullString
+		var teamID sql.NullInt64
+		var sessionCode sql.NullString
 		if err := rows.Scan(&p.ID, &p.GameID, &teamID, &p.DeviceID, &p.Nickname,
 			&p.Score, &p.Kills, &p.Deaths, &p.IsAlive, &p.KillStreak, &p.WeaponLevel, &p.ShotsFired, &sessionCode); err != nil {
 			return nil, err
 		}
 		if teamID.Valid {
-			p.TeamID = &teamID.String
+			v := int(teamID.Int64)
+			p.TeamID = &v
 		}
 		if sessionCode.Valid {
 			p.SessionCode = sessionCode.String
@@ -221,11 +227,11 @@ func (r *PlayerRepo) GetBySessionCode(ctx context.Context, code string) (*domain
 	))
 }
 
-func nilIfEmpty(s *string) any {
-	if s == nil || *s == "" {
+func nilIfEmptyInt(v *int) any {
+	if v == nil {
 		return nil
 	}
-	return *s
+	return *v
 }
 
 func nilIfEmptyStr(s string) any {

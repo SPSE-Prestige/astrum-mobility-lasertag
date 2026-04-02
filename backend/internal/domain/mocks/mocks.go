@@ -124,16 +124,16 @@ func (m *MockGameRepository) ListByStatus(ctx context.Context, status domain.Gam
 
 type MockTeamRepository struct {
 	CreateFn     func(ctx context.Context, t *domain.Team) error
-	GetByIDFn    func(ctx context.Context, id string) (*domain.Team, error)
+	GetByIDFn    func(ctx context.Context, id int) (*domain.Team, error)
 	ListByGameFn func(ctx context.Context, gameID string) ([]domain.Team, error)
-	DeleteFn     func(ctx context.Context, id string) error
+	DeleteFn     func(ctx context.Context, id int) error
 }
 
 func (m *MockTeamRepository) Create(ctx context.Context, t *domain.Team) error {
 	return m.CreateFn(ctx, t)
 }
 
-func (m *MockTeamRepository) GetByID(ctx context.Context, id string) (*domain.Team, error) {
+func (m *MockTeamRepository) GetByID(ctx context.Context, id int) (*domain.Team, error) {
 	return m.GetByIDFn(ctx, id)
 }
 
@@ -141,7 +141,7 @@ func (m *MockTeamRepository) ListByGame(ctx context.Context, gameID string) ([]d
 	return m.ListByGameFn(ctx, gameID)
 }
 
-func (m *MockTeamRepository) Delete(ctx context.Context, id string) error {
+func (m *MockTeamRepository) Delete(ctx context.Context, id int) error {
 	return m.DeleteFn(ctx, id)
 }
 
@@ -153,7 +153,7 @@ type MockPlayerRepository struct {
 	GetByGameAndDeviceFn       func(ctx context.Context, gameID, deviceID string) (*domain.Player, error)
 	FindActivePlayerByDeviceFn func(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error)
 	ListByGameFn               func(ctx context.Context, gameID string) ([]domain.Player, error)
-	ListByTeamFn               func(ctx context.Context, teamID string) ([]domain.Player, error)
+	ListByTeamFn               func(ctx context.Context, teamID int) ([]domain.Player, error)
 	UpdateFn                   func(ctx context.Context, p *domain.Player) error
 	DeleteFn                   func(ctx context.Context, id string) error
 	KillPlayerFn               func(ctx context.Context, playerID string) (bool, error)
@@ -186,7 +186,7 @@ func (m *MockPlayerRepository) ListByGame(ctx context.Context, gameID string) ([
 	return m.ListByGameFn(ctx, gameID)
 }
 
-func (m *MockPlayerRepository) ListByTeam(ctx context.Context, teamID string) ([]domain.Player, error) {
+func (m *MockPlayerRepository) ListByTeam(ctx context.Context, teamID int) ([]domain.Player, error) {
 	return m.ListByTeamFn(ctx, teamID)
 }
 
@@ -368,18 +368,18 @@ type MockGameUseCasePort struct {
 	GetGameFn          func(ctx context.Context, id string) (*domain.Game, error)
 	ListGamesFn        func(ctx context.Context) ([]domain.Game, error)
 	GetGameFullFn      func(ctx context.Context, gameID string) (*domain.GameFull, error)
-	StartGameFn        func(ctx context.Context, gameID string) (*domain.Game, []string, error)
+	StartGameFn        func(ctx context.Context, gameID string) (*domain.Game, []domain.Player, error)
 	EndGameFn          func(ctx context.Context, gameID string) (*domain.Game, []string, error)
 	UpdateSettingsFn   func(ctx context.Context, gameID string, settings domain.GameSettings) (*domain.Game, error)
 	AddTeamFn          func(ctx context.Context, gameID, name, color string) (*domain.Team, error)
 	ListTeamsFn        func(ctx context.Context, gameID string) ([]domain.Team, error)
-	RemoveTeamFn       func(ctx context.Context, gameID, teamID string) error
-	AddPlayerFn        func(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*domain.Player, error)
+	RemoveTeamFn       func(ctx context.Context, gameID string, teamID int) error
+	AddPlayerFn        func(ctx context.Context, gameID, deviceID, nickname string, teamID *int) (*domain.Player, error)
 	RemovePlayerFn     func(ctx context.Context, gameID, playerID string) error
 	ListPlayersFn      func(ctx context.Context, gameID string) ([]domain.Player, error)
 	GetLeaderboardFn   func(ctx context.Context, gameID string) ([]domain.Player, error)
 	ListEventsFn       func(ctx context.Context, gameID string) ([]domain.GameEvent, error)
-	UpdatePlayerTeamFn func(ctx context.Context, playerID string, teamID *string) error
+	UpdatePlayerTeamFn func(ctx context.Context, playerID string, teamID *int) error
 	ShouldAutoEndFn    func(ctx context.Context, gameID string) (bool, error)
 	RemainingTimeFn    func(game *domain.Game) int
 	GetPlayerSessionFn func(ctx context.Context, code string) (*domain.PlayerSession, error)
@@ -401,7 +401,7 @@ func (m *MockGameUseCasePort) GetGameFull(ctx context.Context, gameID string) (*
 	return m.GetGameFullFn(ctx, gameID)
 }
 
-func (m *MockGameUseCasePort) StartGame(ctx context.Context, gameID string) (*domain.Game, []string, error) {
+func (m *MockGameUseCasePort) StartGame(ctx context.Context, gameID string) (*domain.Game, []domain.Player, error) {
 	return m.StartGameFn(ctx, gameID)
 }
 
@@ -421,11 +421,11 @@ func (m *MockGameUseCasePort) ListTeams(ctx context.Context, gameID string) ([]d
 	return m.ListTeamsFn(ctx, gameID)
 }
 
-func (m *MockGameUseCasePort) RemoveTeam(ctx context.Context, gameID, teamID string) error {
+func (m *MockGameUseCasePort) RemoveTeam(ctx context.Context, gameID string, teamID int) error {
 	return m.RemoveTeamFn(ctx, gameID, teamID)
 }
 
-func (m *MockGameUseCasePort) AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*domain.Player, error) {
+func (m *MockGameUseCasePort) AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *int) (*domain.Player, error) {
 	return m.AddPlayerFn(ctx, gameID, deviceID, nickname, teamID)
 }
 
@@ -445,7 +445,7 @@ func (m *MockGameUseCasePort) ListEvents(ctx context.Context, gameID string) ([]
 	return m.ListEventsFn(ctx, gameID)
 }
 
-func (m *MockGameUseCasePort) UpdatePlayerTeam(ctx context.Context, playerID string, teamID *string) error {
+func (m *MockGameUseCasePort) UpdatePlayerTeam(ctx context.Context, playerID string, teamID *int) error {
 	return m.UpdatePlayerTeamFn(ctx, playerID, teamID)
 }
 

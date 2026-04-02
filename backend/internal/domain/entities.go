@@ -116,8 +116,7 @@ func (s GameSettings) Validate() error {
 }
 
 type Team struct {
-	ID     string
-	Number int
+	ID     int
 	GameID string
 	Name   string
 	Color  string
@@ -126,7 +125,7 @@ type Team struct {
 type Player struct {
 	ID          string
 	GameID      string
-	TeamID      *string
+	TeamID      *int
 	DeviceID    string
 	Nickname    string
 	Score       int

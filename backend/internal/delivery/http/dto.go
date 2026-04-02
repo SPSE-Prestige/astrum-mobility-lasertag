@@ -28,13 +28,13 @@ type AddTeamRequest struct {
 }
 
 type AddPlayerRequest struct {
-	DeviceID string  `json:"device_id"`
-	Nickname string  `json:"nickname"`
-	TeamID   *string `json:"team_id,omitempty"`
+	DeviceID string `json:"device_id"`
+	Nickname string `json:"nickname"`
+	TeamID   *int   `json:"team_id,omitempty"`
 }
 
 type UpdatePlayerTeamRequest struct {
-	TeamID *string `json:"team_id"`
+	TeamID *int `json:"team_id"`
 }
 
 type UpdateSettingsRequest struct {
@@ -66,16 +66,16 @@ type GameResponse struct {
 }
 
 type TeamResponse struct {
-	ID     string `json:"id"`
+	ID     int    `json:"id"`
 	GameID string `json:"game_id"`
 	Name   string `json:"name"`
 	Color  string `json:"color"`
 }
 
 type PlayerResponse struct {
-	ID          string  `json:"id"`
-	GameID      string  `json:"game_id"`
-	TeamID      *string `json:"team_id,omitempty"`
+	ID          string `json:"id"`
+	GameID      string `json:"game_id"`
+	TeamID      *int   `json:"team_id,omitempty"`
 	DeviceID    string  `json:"device_id"`
 	Nickname    string  `json:"nickname"`
 	Score       int     `json:"score"`

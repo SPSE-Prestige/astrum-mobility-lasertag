@@ -13,14 +13,13 @@ type TeamRepo struct{ db *sql.DB }
 func NewTeamRepo(db *sql.DB) *TeamRepo { return &TeamRepo{db: db} }
 
 func (r *TeamRepo) Create(ctx context.Context, t *domain.Team) error {
-	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
-		`INSERT INTO teams (id, game_id, name, color) VALUES ($1,$2,$3,$4)`,
-		t.ID, t.GameID, t.Name, t.Color,
-	)
-	return err
+	return getExecutor(ctx, r.db).QueryRowContext(ctx,
+		`INSERT INTO teams (game_id, name, color) VALUES ($1,$2,$3) RETURNING id`,
+		t.GameID, t.Name, t.Color,
+	).Scan(&t.ID)
 }
 
-func (r *TeamRepo) GetByID(ctx context.Context, id string) (*domain.Team, error) {
+func (r *TeamRepo) GetByID(ctx context.Context, id int) (*domain.Team, error) {
 	t := &domain.Team{}
 	err := getExecutor(ctx, r.db).QueryRowContext(ctx,
 		`SELECT id, game_id, name, color FROM teams WHERE id = $1`, id,
@@ -50,7 +49,7 @@ func (r *TeamRepo) ListByGame(ctx context.Context, gameID string) ([]domain.Team
 	return teams, rows.Err()
 }
 
-func (r *TeamRepo) Delete(ctx context.Context, id string) error {
+func (r *TeamRepo) Delete(ctx context.Context, id int) error {
 	_, err := getExecutor(ctx, r.db).ExecContext(ctx, `DELETE FROM teams WHERE id = $1`, id)
 	return err
 }
