@@ -203,10 +203,10 @@ func (uc *GameUseCase) ListPlayers(ctx context.Context, gameID string) ([]domain
 }
 
 // StartGame transitions game from lobby to running within a transaction.
-// Returns the game and a list of device IDs for MQTT notification.
-func (uc *GameUseCase) StartGame(ctx context.Context, gameID string) (*domain.Game, []string, error) {
+// Returns the game and the list of players for MQTT notification.
+func (uc *GameUseCase) StartGame(ctx context.Context, gameID string) (*domain.Game, []domain.Player, error) {
 	var result *domain.Game
-	var deviceIDs []string
+	var resultPlayers []domain.Player
 
 	err := uc.txMgr.WithTx(ctx, func(txCtx context.Context) error {
 		game, err := uc.games.GetByID(txCtx, gameID)
@@ -234,17 +234,17 @@ func (uc *GameUseCase) StartGame(ctx context.Context, gameID string) (*domain.Ga
 			if err := uc.devices.UpdateStatus(txCtx, p.DeviceID, domain.DeviceInGame); err != nil {
 				return fmt.Errorf("mark device %s in-game: %w", p.DeviceID, err)
 			}
-			deviceIDs = append(deviceIDs, p.DeviceID)
 		}
 
 		result = game
+		resultPlayers = players
 		return nil
 	})
 
 	if err != nil {
 		return nil, nil, err
 	}
-	return result, deviceIDs, nil
+	return result, resultPlayers, nil
 }
 
 // EndGame transitions game from running to finished within a transaction.

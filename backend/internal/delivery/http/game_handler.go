@@ -158,14 +158,14 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 //	@Router		/games/{id}/start [post]
 func (h *GameHandler) Start(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
-	game, deviceIDs, err := h.gameUC.StartGame(r.Context(), gameID)
+	game, players, err := h.gameUC.StartGame(r.Context(), gameID)
 	if err != nil {
 		handleDomainError(w, err)
 		return
 	}
 
 	// Notify devices via MQTT (non-blocking)
-	h.mqtt.PublishGameStart(deviceIDs, gameID)
+	h.mqtt.PublishGameStart(players, *game)
 
 	writeJSON(w, http.StatusOK, toGameResponse(*game))
 }

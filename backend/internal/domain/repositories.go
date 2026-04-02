@@ -148,7 +148,7 @@ type HitUseCasePort interface {
 // MQTTPublisher defines MQTT command publishing.
 type MQTTPublisher interface {
 	SendCommand(deviceID string, command any)
-	PublishGameStart(players []Player, gameID string)
+	PublishGameStart(players []Player, game Game)
 	PublishGameEnd(deviceIDs []string)
 	// PublishGameState sends current game state to a single reconnecting device.
 	PublishGameState(deviceID string, info *ReconnectInfo)
