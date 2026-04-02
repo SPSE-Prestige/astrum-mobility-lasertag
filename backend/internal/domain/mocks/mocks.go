@@ -257,7 +257,7 @@ func (m *MockTxManager) WithTx(ctx context.Context, fn func(ctx context.Context)
 
 type MockMQTTPublisher struct {
 	SendCommandFn      func(deviceID string, command any)
-	PublishGameStartFn func(deviceIDs []domain.Player, gameID string)
+	PublishGameStartFn func(players []domain.Player, game domain.Game)
 	PublishGameEndFn   func(deviceIDs []string)
 	PublishGameStateFn func(deviceID string, info *domain.ReconnectInfo)
 }
@@ -268,9 +268,9 @@ func (m *MockMQTTPublisher) SendCommand(deviceID string, command any) {
 	}
 }
 
-func (m *MockMQTTPublisher) PublishGameStart(deviceIDs []domain.Player, gameID string) {
+func (m *MockMQTTPublisher) PublishGameStart(players []domain.Player, game domain.Game) {
 	if m.PublishGameStartFn != nil {
-		m.PublishGameStartFn(deviceIDs.DeviceID, gameID)
+		m.PublishGameStartFn(players, game)
 	}
 }
 
