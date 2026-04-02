@@ -120,12 +120,27 @@ func toPlayerSessionResponse(s *domain.PlayerSession) PlayerSessionResponse {
 			},
 		},
 		RemainingTime: s.RemainingTime,
+		Leaderboard:   make([]LeaderboardPlayerDTO, 0, len(s.Leaderboard)),
+		Events:        make([]EventResponse, 0, len(s.Events)),
 	}
 	if s.Team != nil {
 		resp.Team = &PlayerSessionTeamDTO{
 			Name:  s.Team.Name,
 			Color: s.Team.Color,
 		}
+	}
+	for _, p := range s.Leaderboard {
+		resp.Leaderboard = append(resp.Leaderboard, LeaderboardPlayerDTO{
+			Nickname:   p.Nickname,
+			Score:      p.Score,
+			Kills:      p.Kills,
+			Deaths:     p.Deaths,
+			ShotsFired: p.ShotsFired,
+			IsCurrent:  p.ID == s.Player.ID,
+		})
+	}
+	for _, e := range s.Events {
+		resp.Events = append(resp.Events, toEventResponse(e))
 	}
 	return resp
 }

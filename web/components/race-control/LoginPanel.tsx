@@ -30,7 +30,7 @@ export const LoginPanel = ({ isAuthenticated, username, error, language, onLogin
       <section className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{language === "cs" ? "Přihlášení" : "Login"}</p>
         <p className="mt-2 text-sm text-zinc-200">
-          {language === "cs" ? "Přihlášen" : "Logged in"}: <span className="font-semibold text-[#00ff00]">{username}</span>
+          {language === "cs" ? "Přihlášen" : "Logged in"}: <span className="font-semibold text-[#ff0a0a]">{username}</span>
         </p>
         <button
           type="button"
@@ -68,7 +68,7 @@ export const LoginPanel = ({ isAuthenticated, username, error, language, onLogin
         {error && <p className="text-xs text-[#ff0000]">{error === "invalid_credentials" ? invalidCredentialsMessage : error}</p>}
         <button
           type="submit"
-          className="inline-flex items-center gap-2 rounded-md border border-[#00ff00]/70 bg-[#00ff00]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#00ff00] transition hover:bg-[#00ff00]/20"
+          className="inline-flex items-center gap-2 rounded-md border border-[#ff0a0a]/70 bg-[#ff0a0a]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#ff0a0a] transition hover:bg-[#ff0a0a]/20"
         >
           <LogIn className="h-4 w-4" />
           {language === "cs" ? "Přihlásit" : "Login"}

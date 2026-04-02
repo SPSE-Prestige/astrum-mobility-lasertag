@@ -69,12 +69,12 @@ export const PhaseSidebar = ({ phase, language, raceStatus, onPhaseChange }: Pha
                 isDisabled
                   ? "border-zinc-800 bg-zinc-900/30 text-zinc-500 cursor-not-allowed opacity-50"
                   : active
-                    ? "border-[#00ff00]/70 bg-[#00ff00]/10 text-zinc-50"
+                    ? "border-[#ff0a0a]/70 bg-[#ff0a0a]/10 text-zinc-50"
                     : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-600"
               }`}
             >
               <span className="font-medium">{label[language]}</span>
-              <Icon className={`h-4 w-4 ${active ? "text-[#00ff00]" : isDisabled ? "text-zinc-700" : "text-zinc-500"}`} />
+              <Icon className={`h-4 w-4 ${active ? "text-[#ff0a0a]" : isDisabled ? "text-zinc-700" : "text-zinc-500"}`} />
             </button>
           );
         })}

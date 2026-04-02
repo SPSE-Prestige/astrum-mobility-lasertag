@@ -38,8 +38,8 @@ export const PlayerCard = ({ player, language }: PlayerCardProps) => {
           <span
             className={`rounded-full border px-2 py-1 text-xs uppercase tracking-[0.15em] ${
               isAlive
-                ? "border-[#00ff00]/50 bg-[#00ff00]/10 text-[#00ff00]"
-                : "border-[#ff0000]/50 bg-[#ff0000]/10 text-[#ff0000]"
+                ? "border-[#ff0a0a]/50 bg-[#ff0a0a]/10 text-[#ff0a0a]"
+                : "border-red-300/50 bg-red-300/10 text-red-300"
             }`}
           >
             {statusLabel}
@@ -52,13 +52,13 @@ export const PlayerCard = ({ player, language }: PlayerCardProps) => {
           <p className="inline-flex items-center gap-1 text-zinc-500">
             <Crosshair className="h-3.5 w-3.5" /> Kills
           </p>
-          <p className="mt-1 text-sm font-semibold text-[#00ff00]">{player.kills}</p>
+          <p className="mt-1 text-sm font-semibold text-[#ff0a0a]">{player.kills}</p>
         </div>
         <div className="rounded-md border border-zinc-800 bg-black/40 p-2">
           <p className="inline-flex items-center gap-1 text-zinc-500">
             <Skull className="h-3.5 w-3.5" /> Deaths
           </p>
-          <p className="mt-1 text-sm font-semibold text-[#ff0000]">{player.deaths}</p>
+          <p className="mt-1 text-sm font-semibold text-red-300">{player.deaths}</p>
         </div>
         <div className="rounded-md border border-zinc-800 bg-black/40 p-2">
           <p className="inline-flex items-center gap-1 text-zinc-500">

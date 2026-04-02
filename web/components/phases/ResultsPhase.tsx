@@ -26,11 +26,11 @@ export function ResultsPhase({ teamResults, leaderboard, matchHistory, gameMode,
         <h2 className="mt-1 text-3xl font-semibold text-zinc-100 md:text-4xl">{t("phase.results", language)}</h2>
       </header>
 
-      <article className="rounded-2xl border border-[#00ff00]/40 bg-[#00ff00]/5 p-5">
+      <article className="rounded-2xl border border-[#ff0a0a]/40 bg-[#ff0a0a]/5 p-5">
         <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">
           {gameMode === "ffa" ? t("results.winningPlayer", language) : t("results.winningTeam", language)}
         </p>
-        <h3 className="mt-2 text-2xl font-semibold text-[#00ff00]">
+        <h3 className="mt-2 text-2xl font-semibold text-[#ff0a0a]">
           {winner?.team ?? t("results.tbd", language)}
         </h3>
       </article>
@@ -44,10 +44,10 @@ export function ResultsPhase({ teamResults, leaderboard, matchHistory, gameMode,
                 {t("results.score", language)}: <span className="text-[#ff0000]">{r.score}</span>
               </p>
               <p>
-                Kills: <span className="text-[#00ff00]">{r.kills}</span>
+                Kills: <span className="text-[#ff0a0a]">{r.kills}</span>
               </p>
               <p>
-                Deaths: <span className="text-[#ff0000]">{r.deaths}</span>
+                Deaths: <span className="text-red-300">{r.deaths}</span>
               </p>
               <p>
                 {language === "cs" ? "Přesnost" : "Accuracy"}:{" "}

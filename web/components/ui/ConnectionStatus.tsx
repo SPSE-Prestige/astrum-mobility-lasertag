@@ -6,8 +6,8 @@ interface ConnectionStatusProps {
 
 const config = {
   connecting: { icon: Wifi, label: "Connecting...", dot: "bg-amber-500 animate-pulse", text: "text-amber-400" },
-  connected: { icon: Wifi, label: "Live", dot: "bg-emerald-500", text: "text-emerald-400" },
-  disconnected: { icon: WifiOff, label: "Offline", dot: "bg-red-500", text: "text-red-400" },
+  connected: { icon: Wifi, label: "Live", dot: "bg-red-500", text: "text-red-400" },
+  disconnected: { icon: WifiOff, label: "Offline", dot: "bg-red-300", text: "text-red-300" },
 };
 
 export function ConnectionStatus({ status }: ConnectionStatusProps) {

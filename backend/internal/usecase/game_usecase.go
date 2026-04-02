@@ -362,6 +362,18 @@ func (uc *GameUseCase) GetPlayerSession(ctx context.Context, code string) (*doma
 		}
 	}
 
+	// Include leaderboard (all players sorted by score)
+	leaderboard, err := uc.players.ListByGame(ctx, player.GameID)
+	if err == nil {
+		session.Leaderboard = leaderboard
+	}
+
+	// Include game events for kill feed
+	events, err := uc.events.ListByGame(ctx, player.GameID)
+	if err == nil {
+		session.Events = events
+	}
+
 	return session, nil
 }
 

@@ -26,8 +26,8 @@ const icons: Record<ToastType, typeof AlertTriangle> = {
 };
 
 const styles: Record<ToastType, string> = {
-  success: "border-emerald-500/50 bg-emerald-950/90 text-emerald-200",
-  error: "border-red-500/50 bg-red-950/90 text-red-200",
+  success: "border-red-500/50 bg-red-950/90 text-red-100",
+  error: "border-red-400/50 bg-red-950/90 text-red-300",
   info: "border-blue-500/50 bg-blue-950/90 text-blue-200",
 };
 

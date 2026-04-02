@@ -169,6 +169,8 @@ type ReconnectInfo struct {
 type PlayerSession struct {
 	Player        Player
 	Game          Game
-	Team          *Team // nil if unassigned
-	RemainingTime int   // seconds remaining (-1 = unlimited)
+	Team          *Team       // nil if unassigned
+	RemainingTime int         // seconds remaining (-1 = unlimited)
+	Leaderboard   []Player    // all players sorted by score desc
+	Events        []GameEvent // game events for kill feed
 }

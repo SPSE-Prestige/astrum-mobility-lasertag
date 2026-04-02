@@ -3,7 +3,8 @@
 :root {
   --background: #020303;
   --foreground: #ebedef;
-  --neon-green: #00ff00;
+  --brand-red: #ff0a0a;
+  --brand-red-light: #ff4444;
   --alert-red: #ff0000;
 }
 

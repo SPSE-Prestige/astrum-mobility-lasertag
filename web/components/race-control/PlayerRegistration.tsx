@@ -66,7 +66,7 @@ export const PlayerRegistration = ({
           type="button"
           onClick={onStartGame}
           disabled={players.length < 2 || actionLoading.startRace}
-          className="rounded-xl border-2 border-[#00ff00] bg-[#00ff00]/20 px-6 py-3 text-lg font-semibold uppercase tracking-[0.16em] text-[#00ff00] shadow-[0_0_20px_rgba(0,255,0,0.3)] transition hover:bg-[#00ff00]/30 hover:shadow-[0_0_30px_rgba(0,255,0,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-xl border-2 border-[#ff0a0a] bg-[#ff0a0a]/20 px-6 py-3 text-lg font-semibold uppercase tracking-[0.16em] text-[#ff0a0a] shadow-[0_0_20px_rgba(255,10,10,0.3)] transition hover:bg-[#ff0a0a]/30 hover:shadow-[0_0_30px_rgba(255,10,10,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {actionLoading.startRace ? (
             <RefreshCw className="mr-2 inline h-5 w-5 animate-spin" />
@@ -81,7 +81,7 @@ export const PlayerRegistration = ({
         {/* Add Player */}
         <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
           <h3 className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-300">
-            <Plus className="h-4 w-4 text-[#00ff00]" />
+            <Plus className="h-4 w-4 text-[#ff0a0a]" />
             {language === "cs" ? "Přidat hráče" : "Add Player"}
           </h3>
 
@@ -180,7 +180,7 @@ export const PlayerRegistration = ({
                 className="group flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm hover:border-zinc-700 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
                   <div>
                     <span className="font-medium text-zinc-200">{player.name}</span>
                     <span className="ml-2 text-xs text-zinc-500">{player.deviceId}</span>

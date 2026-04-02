@@ -36,8 +36,8 @@ export const Leaderboard = ({ players, gameMode, language }: LeaderboardProps) =
               <tr key={player.id} className="border-t border-zinc-800 text-zinc-200">
                 <td className="px-3 py-2">{player.name}</td>
                 <td className="px-3 py-2">{gameMode === "ffa" ? "Solo" : player.team}</td>
-                <td className="px-3 py-2 text-[#00ff00]">{player.kills}</td>
-                <td className="px-3 py-2 text-[#ff0000]">{player.deaths}</td>
+                <td className="px-3 py-2 text-[#ff0a0a]">{player.kills}</td>
+                <td className="px-3 py-2 text-red-300">{player.deaths}</td>
                 <td className="px-3 py-2 font-semibold">{player.score}</td>
                 <td className="px-3 py-2 text-cyan-400">{formatAccuracy(player.kills, player.shotsFired)}</td>
                 <td className="px-3 py-2 text-amber-400">{player.weaponLevel > 0 ? `LVL ${player.weaponLevel}` : "—"}</td>

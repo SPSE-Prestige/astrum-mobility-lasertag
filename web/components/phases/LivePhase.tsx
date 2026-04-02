@@ -42,7 +42,7 @@ export function LivePhase({ players, leaderboard, killFeed, raceTime, raceStatus
             <div className="space-y-2">
               {killFeed.map((entry) => (
                 <div key={entry.id} className="rounded-md border border-zinc-800 bg-black/40 px-3 py-2 text-xs text-zinc-300">
-                  <span className="mr-2 text-[#00ff00]">[{entry.timestamp}]</span>
+                  <span className="mr-2 text-[#ff0a0a]">[{entry.timestamp}]</span>
                   {entry.message}
                 </div>
               ))}

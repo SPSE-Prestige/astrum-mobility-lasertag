@@ -161,7 +161,7 @@ export const useGameData = () => {
       let teams: TeamResponse[] = [];
       if (config.gameMode === "team") {
         const defs = [
-          { name: "Neon Green", color: "#00ff00" },
+          { name: "Brand Red", color: "#ff0a0a" },
           { name: "Neon Red", color: "#ff0000" },
           { name: "Neon Blue", color: "#0088ff" },
           { name: "Neon Yellow", color: "#ffff00" },

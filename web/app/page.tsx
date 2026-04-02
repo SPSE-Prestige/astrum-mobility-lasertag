@@ -15,7 +15,7 @@ import { t } from "@/lib/i18n";
 import type { Language } from "@/types/i18n";
 
 const LANGUAGE_STORAGE_KEY = "race-control-language";
-const BG_GRADIENT = "min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(0,255,0,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,0,0,0.12),transparent_30%),#020303] p-4 md:p-8";
+const BG_GRADIENT = "min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(255,10,10,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,0,0,0.12),transparent_30%),#020303] p-4 md:p-8";
 
 export default function Home() {
   const {
@@ -74,14 +74,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setLanguage("cs")}
-                className={`rounded-md border px-2 py-1 text-xs ${language === "cs" ? "border-[#00ff00] text-[#00ff00]" : "border-zinc-700 text-zinc-400"}`}
+                className={`rounded-md border px-2 py-1 text-xs ${language === "cs" ? "border-[#ff0a0a] text-[#ff0a0a]" : "border-zinc-700 text-zinc-400"}`}
               >
                 CZ
               </button>
               <button
                 type="button"
                 onClick={() => setLanguage("en")}
-                className={`rounded-md border px-2 py-1 text-xs ${language === "en" ? "border-[#00ff00] text-[#00ff00]" : "border-zinc-700 text-zinc-400"}`}
+                className={`rounded-md border px-2 py-1 text-xs ${language === "en" ? "border-[#ff0a0a] text-[#ff0a0a]" : "border-zinc-700 text-zinc-400"}`}
               >
                 EN
               </button>

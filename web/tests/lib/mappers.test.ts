@@ -5,7 +5,7 @@ import type { Player } from "@/types/game";
 
 // ── Fixtures ──
 
-const teamA: TeamResponse = { id: "t1", name: "Neon Green", color: "#00ff00" };
+const teamA: TeamResponse = { id: "t1", name: "Brand Red", color: "#ff0a0a" };
 const teamB: TeamResponse = { id: "t2", name: "Neon Red", color: "#ff0000" };
 const teams: TeamResponse[] = [teamA, teamB];
 
@@ -33,7 +33,7 @@ describe("toPlayer", () => {
     expect(p).toEqual({
       id: "p1",
       name: "Alice",
-      team: "Neon Green",
+      team: "Brand Red",
       teamId: "t1",
       deviceId: "DEVICE-01",
       status: "alive",
@@ -68,7 +68,7 @@ describe("toPlayer", () => {
 
 describe("toTeam", () => {
   it("maps TeamResponse to domain Team", () => {
-    expect(toTeam(teamA)).toEqual({ id: "t1", name: "Neon Green", color: "#00ff00" });
+    expect(toTeam(teamA)).toEqual({ id: "t1", name: "Brand Red", color: "#ff0a0a" });
   });
 });
 

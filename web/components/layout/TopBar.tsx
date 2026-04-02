@@ -21,14 +21,14 @@ export function TopBar({ language, username, wsStatus, showConnectionStatus, onL
           <button
             type="button"
             onClick={() => onLanguageChange("cs")}
-            className={`rounded-md border px-2 py-1 text-xs ${language === "cs" ? "border-[#00ff00] text-[#00ff00]" : "border-zinc-700 text-zinc-400"}`}
+            className={`rounded-md border px-2 py-1 text-xs ${language === "cs" ? "border-[#ff0a0a] text-[#ff0a0a]" : "border-zinc-700 text-zinc-400"}`}
           >
             CZ
           </button>
           <button
             type="button"
             onClick={() => onLanguageChange("en")}
-            className={`rounded-md border px-2 py-1 text-xs ${language === "en" ? "border-[#00ff00] text-[#00ff00]" : "border-zinc-700 text-zinc-400"}`}
+            className={`rounded-md border px-2 py-1 text-xs ${language === "en" ? "border-[#ff0a0a] text-[#ff0a0a]" : "border-zinc-700 text-zinc-400"}`}
           >
             EN
           </button>

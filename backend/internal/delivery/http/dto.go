@@ -125,10 +125,12 @@ type HealthCheck struct {
 
 // PlayerSessionResponse is the public response for mobile app session lookup.
 type PlayerSessionResponse struct {
-	Player        PlayerSessionPlayerDTO `json:"player"`
-	Game          PlayerSessionGameDTO   `json:"game"`
-	Team          *PlayerSessionTeamDTO  `json:"team"`
-	RemainingTime int                    `json:"remaining_time"`
+	Player        PlayerSessionPlayerDTO      `json:"player"`
+	Game          PlayerSessionGameDTO        `json:"game"`
+	Team          *PlayerSessionTeamDTO       `json:"team"`
+	RemainingTime int                         `json:"remaining_time"`
+	Leaderboard   []LeaderboardPlayerDTO      `json:"leaderboard"`
+	Events        []EventResponse             `json:"events"`
 }
 
 type PlayerSessionPlayerDTO struct {
@@ -151,4 +153,15 @@ type PlayerSessionGameDTO struct {
 type PlayerSessionTeamDTO struct {
 	Name  string `json:"name"`
 	Color string `json:"color"`
+}
+
+type LeaderboardPlayerDTO struct {
+	Nickname  string  `json:"nickname"`
+	Score     int     `json:"score"`
+	Kills     int     `json:"kills"`
+	Deaths    int     `json:"deaths"`
+	ShotsFired int    `json:"shots_fired"`
+	TeamName  *string `json:"team_name,omitempty"`
+	TeamColor *string `json:"team_color,omitempty"`
+	IsCurrent bool    `json:"is_current"`
 }
