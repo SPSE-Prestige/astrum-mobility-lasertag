@@ -32,7 +32,7 @@ export interface GameResponse {
 }
 
 export interface TeamResponse {
-  id: string;
+  id: number;
   game_id: string;
   name: string;
   color: string;
@@ -41,7 +41,7 @@ export interface TeamResponse {
 export interface PlayerResponse {
   id: string;
   game_id: string;
-  team_id?: string;
+  team_id?: number;
   device_id: string;
   nickname: string;
   score: number;

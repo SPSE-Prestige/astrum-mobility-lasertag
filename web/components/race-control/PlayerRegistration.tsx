@@ -12,9 +12,9 @@ interface PlayerRegistrationProps {
   gameMode: GameMode;
   language: Language;
   actionLoading?: Record<string, boolean>;
-  onAddPlayer: (deviceId: string, nickname: string, teamId?: string) => Promise<void>;
+  onAddPlayer: (deviceId: string, nickname: string, teamId?: number) => Promise<void>;
   onRemovePlayer: (playerId: string) => Promise<void>;
-  onAssignTeam: (playerId: string, teamId: string | null) => Promise<void>;
+  onAssignTeam: (playerId: string, teamId: number | null) => Promise<void>;
   onRefreshDevices: () => Promise<void>;
   onStartGame: () => Promise<void>;
 }
@@ -42,7 +42,7 @@ export const PlayerRegistration = ({
     if (!nickname.trim() || !selectedDevice) return;
     setLoading(true);
     try {
-      await onAddPlayer(selectedDevice, nickname.trim(), selectedTeam || undefined);
+      await onAddPlayer(selectedDevice, nickname.trim(), selectedTeam ? Number(selectedTeam) : undefined);
       setNickname("");
       setSelectedDevice("");
       setSelectedTeam("");
@@ -189,8 +189,8 @@ export const PlayerRegistration = ({
                 <div className="flex items-center gap-2">
                   {gameMode === "team" && (
                     <select
-                      value={player.teamId ?? ""}
-                      onChange={(e) => onAssignTeam(player.id, e.target.value || null)}
+                      value={player.teamId != null ? String(player.teamId) : ""}
+                      onChange={(e) => onAssignTeam(player.id, e.target.value ? Number(e.target.value) : null)}
                       className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
                     >
                       <option value="">{language === "cs" ? "Bez týmu" : "No team"}</option>

@@ -40,12 +40,12 @@ export const gameApi = {
   listTeams: (gameId: string) =>
     httpClient.get<TeamResponse[]>(`/games/${enc(gameId)}/teams`),
 
-  removeTeam: (gameId: string, teamId: string) =>
-    httpClient.del<void>(`/games/${enc(gameId)}/teams/${enc(teamId)}`),
+  removeTeam: (gameId: string, teamId: number) =>
+    httpClient.del<void>(`/games/${enc(gameId)}/teams/${enc(String(teamId))}`),
 
   // ── Players ──
 
-  addPlayer: (gameId: string, deviceId: string, nickname: string, teamId?: string) =>
+  addPlayer: (gameId: string, deviceId: string, nickname: string, teamId?: number) =>
     httpClient.post<PlayerResponse>(`/games/${enc(gameId)}/players`, {
       device_id: deviceId,
       nickname,
@@ -58,7 +58,7 @@ export const gameApi = {
   removePlayer: (gameId: string, playerId: string) =>
     httpClient.del<void>(`/games/${enc(gameId)}/players/${enc(playerId)}`),
 
-  updatePlayerTeam: (gameId: string, playerId: string, teamId: string | null) =>
+  updatePlayerTeam: (gameId: string, playerId: string, teamId: number | null) =>
     httpClient.patch<void>(`/games/${enc(gameId)}/players/${enc(playerId)}/team`, {
       team_id: teamId,
     }),

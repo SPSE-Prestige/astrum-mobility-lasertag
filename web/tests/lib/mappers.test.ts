@@ -5,8 +5,8 @@ import type { Player } from "@/types/game";
 
 // ── Fixtures ──
 
-const teamA: TeamResponse = { id: "t1", name: "Brand Red", color: "#ff0a0a" };
-const teamB: TeamResponse = { id: "t2", name: "Neon Red", color: "#ff0000" };
+const teamA: TeamResponse = { id: 1, game_id: "g1", name: "Brand Red", color: "#ff0a0a" };
+const teamB: TeamResponse = { id: 2, game_id: "g1", name: "Neon Red", color: "#ff0000" };
 const teams: TeamResponse[] = [teamA, teamB];
 
 const rawPlayer = (overrides: Partial<PlayerResponse> = {}): PlayerResponse => ({
@@ -14,7 +14,7 @@ const rawPlayer = (overrides: Partial<PlayerResponse> = {}): PlayerResponse => (
   game_id: "g1",
   device_id: "DEVICE-01",
   nickname: "Alice",
-  team_id: "t1",
+  team_id: 1,
   is_alive: true,
   kills: 5,
   deaths: 2,
@@ -34,7 +34,7 @@ describe("toPlayer", () => {
       id: "p1",
       name: "Alice",
       team: "Brand Red",
-      teamId: "t1",
+      teamId: 1,
       deviceId: "DEVICE-01",
       status: "alive",
       kills: 5,
@@ -68,7 +68,7 @@ describe("toPlayer", () => {
 
 describe("toTeam", () => {
   it("maps TeamResponse to domain Team", () => {
-    expect(toTeam(teamA)).toEqual({ id: "t1", name: "Brand Red", color: "#ff0a0a" });
+    expect(toTeam(teamA)).toEqual({ id: 1, name: "Brand Red", color: "#ff0a0a" });
   });
 });
 
@@ -131,7 +131,7 @@ describe("calcTeamResults", () => {
     id: name,
     name,
     team,
-    teamId: "t1",
+    teamId: 1,
     deviceId: "d1",
     status: "alive",
     kills,

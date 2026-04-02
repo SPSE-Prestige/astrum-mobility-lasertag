@@ -200,7 +200,7 @@ export const useGameData = () => {
     }
   }, [setActionLoading, setError]);
 
-  const addPlayer = useCallback(async (deviceId: string, nickname: string, teamId?: string) => {
+  const addPlayer = useCallback(async (deviceId: string, nickname: string, teamId?: number) => {
     const gameId = state.gameId;
     if (!gameId) return;
     setActionLoading("addPlayer", true);
@@ -247,7 +247,7 @@ export const useGameData = () => {
     }
   }, [state.gameId, state.teams.length, setActionLoading, setError]);
 
-  const assignPlayerTeam = useCallback(async (playerId: string, teamId: string | null) => {
+  const assignPlayerTeam = useCallback(async (playerId: string, teamId: number | null) => {
     const gameId = state.gameId;
     if (!gameId) return;
     try {

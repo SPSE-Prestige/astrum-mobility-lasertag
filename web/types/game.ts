@@ -17,7 +17,7 @@ export interface Player {
   loginCode?: string; // Unique admin-assigned code for mobile login
   name: string;
   team: string;
-  teamId: string | null;
+  teamId: number | null;
   deviceId: string;
   status: "alive" | "dead";
   kills: number;
@@ -30,7 +30,7 @@ export interface Player {
 }
 
 export interface Team {
-  id: string;
+  id: number;
   name: string;
   color: string;
 }
