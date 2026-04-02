@@ -1,25 +1,51 @@
 package http
 
 import (
+	"database/sql"
 	"net/http"
 
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/config"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/delivery/ws"
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
+	mqttclient "github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/infrastructure/mqtt"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 func NewRouter(
-	authUC *usecase.AuthUseCase,
+	cfg *config.Config,
+	authUC domain.AuthUseCasePort,
 	gameHandler *GameHandler,
 	deviceHandler *DeviceHandler,
 	authHandler *AuthHandler,
 	wsHub *ws.Hub,
+	db *sql.DB,
+	mqttClient *mqttclient.Client,
 ) http.Handler {
 	mux := http.NewServeMux()
 
-	// Health check
+	// Health check with DB + MQTT ping
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		dbStatus := "ok"
+		if err := db.Ping(); err != nil {
+			dbStatus = "error"
+		}
+		mqttStatus := "ok"
+		if mqttClient != nil && !mqttClient.Ping() {
+			mqttStatus = "error"
+		}
+		status := http.StatusOK
+		overall := "ok"
+		if dbStatus != "ok" || mqttStatus != "ok" {
+			status = http.StatusServiceUnavailable
+			overall = "degraded"
+		}
+		writeJSON(w, status, HealthResponse{
+			Status: overall,
+			Checks: map[string]HealthCheck{
+				"database": {Status: dbStatus},
+				"mqtt":     {Status: mqttStatus},
+			},
+		})
 	})
 
 	// Swagger UI
@@ -64,10 +90,12 @@ func NewRouter(
 	mux.Handle("GET /api/games/{id}/leaderboard", auth(http.HandlerFunc(gameHandler.Leaderboard)))
 	mux.Handle("GET /api/games/{id}/events", auth(http.HandlerFunc(gameHandler.Events)))
 
-	// Apply global middleware
+	// Apply global middleware (order: outermost first)
 	var handler http.Handler = mux
 	handler = LoggingMiddleware(handler)
-	handler = CORSMiddleware(handler)
+	handler = RequestIDMiddleware(handler)
+	handler = RateLimitMiddleware(cfg.RateLimitRPS, cfg.RateLimitBurst)(handler)
+	handler = CORSMiddleware(cfg)(handler)
 
 	return handler
 }

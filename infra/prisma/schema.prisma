@@ -91,15 +91,17 @@ model Team {
 }
 
 model Player {
-  id       String @id @default(uuid())
-  gameId   String @map("game_id")
-  teamId   String? @map("team_id")
-  deviceId String @map("device_id")
-  nickname String
-  score    Int    @default(0)
-  kills    Int    @default(0)
-  deaths   Int    @default(0)
-  isAlive  Boolean @default(true) @map("is_alive")
+  id          String  @id @default(uuid())
+  gameId      String  @map("game_id")
+  teamId      String? @map("team_id")
+  deviceId    String  @map("device_id")
+  nickname    String
+  score       Int     @default(0)
+  kills       Int     @default(0)
+  deaths      Int     @default(0)
+  isAlive     Boolean @default(true) @map("is_alive")
+  killStreak  Int     @default(0) @map("kill_streak")
+  weaponLevel Int     @default(0) @map("weapon_level")
 
   game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
   team   Team?  @relation(fields: [teamId], references: [id])

@@ -8,19 +8,24 @@ import (
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
 
+const maxBodySize = 1 << 20 // 1 MB
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
 }
 
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, ErrorResponse{Error: msg})
+func writeError(w http.ResponseWriter, status int, code, msg string) {
+	writeJSON(w, status, ErrorResponse{Error: ErrorDetail{Code: code, Message: msg}})
 }
 
 func readJSON(r *http.Request, v any) error {
+	r.Body = http.MaxBytesReader(nil, r.Body, maxBodySize)
 	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(v)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(v)
 }
 
 func fmtTime(t time.Time) string {
@@ -50,10 +55,12 @@ func toGameResponse(g domain.Game) GameResponse {
 		Code:   g.Code,
 		Status: string(g.Status),
 		Settings: GameSettingsDTO{
-			RespawnDelay: g.Settings.RespawnDelay,
-			GameDuration: g.Settings.GameDuration,
-			FriendlyFire: g.Settings.FriendlyFire,
-			MaxPlayers:   g.Settings.MaxPlayers,
+			RespawnDelay:    g.Settings.RespawnDelay,
+			GameDuration:    g.Settings.GameDuration,
+			FriendlyFire:    g.Settings.FriendlyFire,
+			MaxPlayers:      g.Settings.MaxPlayers,
+			ScorePerKill:    g.Settings.ScorePerKill,
+			KillsPerUpgrade: g.Settings.KillsPerUpgrade,
 		},
 		CreatedAt: fmtTime(g.CreatedAt),
 		StartedAt: fmtTimePtr(g.StartedAt),
@@ -72,15 +79,17 @@ func toTeamResponse(t domain.Team) TeamResponse {
 
 func toPlayerResponse(p domain.Player) PlayerResponse {
 	return PlayerResponse{
-		ID:       p.ID,
-		GameID:   p.GameID,
-		TeamID:   p.TeamID,
-		DeviceID: p.DeviceID,
-		Nickname: p.Nickname,
-		Score:    p.Score,
-		Kills:    p.Kills,
-		Deaths:   p.Deaths,
-		IsAlive:  p.IsAlive,
+		ID:          p.ID,
+		GameID:      p.GameID,
+		TeamID:      p.TeamID,
+		DeviceID:    p.DeviceID,
+		Nickname:    p.Nickname,
+		Score:       p.Score,
+		Kills:       p.Kills,
+		Deaths:      p.Deaths,
+		IsAlive:     p.IsAlive,
+		KillStreak:  p.KillStreak,
+		WeaponLevel: p.WeaponLevel,
 	}
 }
 

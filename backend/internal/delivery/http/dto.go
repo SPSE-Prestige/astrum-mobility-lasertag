@@ -14,10 +14,12 @@ type CreateGameRequest struct {
 }
 
 type GameSettingsDTO struct {
-	RespawnDelay int  `json:"respawn_delay"`
-	GameDuration int  `json:"game_duration"`
-	FriendlyFire bool `json:"friendly_fire"`
-	MaxPlayers   int  `json:"max_players"`
+	RespawnDelay    int  `json:"respawn_delay"`
+	GameDuration    int  `json:"game_duration"`
+	FriendlyFire    bool `json:"friendly_fire"`
+	MaxPlayers      int  `json:"max_players"`
+	ScorePerKill    int  `json:"score_per_kill"`
+	KillsPerUpgrade int  `json:"kills_per_upgrade"`
 }
 
 type AddTeamRequest struct {
@@ -71,15 +73,17 @@ type TeamResponse struct {
 }
 
 type PlayerResponse struct {
-	ID       string  `json:"id"`
-	GameID   string  `json:"game_id"`
-	TeamID   *string `json:"team_id,omitempty"`
-	DeviceID string  `json:"device_id"`
-	Nickname string  `json:"nickname"`
-	Score    int     `json:"score"`
-	Kills    int     `json:"kills"`
-	Deaths   int     `json:"deaths"`
-	IsAlive  bool    `json:"is_alive"`
+	ID          string  `json:"id"`
+	GameID      string  `json:"game_id"`
+	TeamID      *string `json:"team_id,omitempty"`
+	DeviceID    string  `json:"device_id"`
+	Nickname    string  `json:"nickname"`
+	Score       int     `json:"score"`
+	Kills       int     `json:"kills"`
+	Deaths      int     `json:"deaths"`
+	IsAlive     bool    `json:"is_alive"`
+	KillStreak  int     `json:"kill_streak"`
+	WeaponLevel int     `json:"weapon_level"`
 }
 
 type GameFullResponse struct {
@@ -97,6 +101,22 @@ type EventResponse struct {
 	Timestamp string         `json:"timestamp"`
 }
 
+type ErrorDetail struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error ErrorDetail `json:"error"`
+}
+
+type HealthResponse struct {
+	Status string                 `json:"status"`
+	Checks map[string]HealthCheck `json:"checks"`
+}
+
+type HealthCheck struct {
+	Status    string `json:"status"`
+	LatencyMs int64  `json:"latency_ms,omitempty"`
+	Error     string `json:"error,omitempty"`
 }

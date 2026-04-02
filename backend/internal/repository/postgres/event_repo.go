@@ -14,7 +14,7 @@ func NewEventRepo(db *sql.DB) *EventRepo { return &EventRepo{db: db} }
 
 func (r *EventRepo) Create(ctx context.Context, e *domain.GameEvent) error {
 	payload, _ := json.Marshal(e.Payload)
-	_, err := r.db.ExecContext(ctx,
+	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
 		`INSERT INTO game_events (id, game_id, type, payload, timestamp) VALUES ($1,$2,$3,$4,$5)`,
 		e.ID, e.GameID, e.Type, payload, e.Timestamp,
 	)
@@ -22,7 +22,7 @@ func (r *EventRepo) Create(ctx context.Context, e *domain.GameEvent) error {
 }
 
 func (r *EventRepo) ListByGame(ctx context.Context, gameID string) ([]domain.GameEvent, error) {
-	rows, err := r.db.QueryContext(ctx,
+	rows, err := getExecutor(ctx, r.db).QueryContext(ctx,
 		`SELECT id, game_id, type, payload, timestamp FROM game_events WHERE game_id = $1 ORDER BY timestamp ASC`,
 		gameID,
 	)

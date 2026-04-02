@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ── Enums ──
 
@@ -63,19 +66,43 @@ type Game struct {
 }
 
 type GameSettings struct {
-	RespawnDelay int  `json:"respawn_delay"` // seconds
-	GameDuration int  `json:"game_duration"` // seconds, 0 = unlimited
-	FriendlyFire bool `json:"friendly_fire"`
-	MaxPlayers   int  `json:"max_players"`
+	RespawnDelay    int  `json:"respawn_delay"`     // seconds
+	GameDuration    int  `json:"game_duration"`     // seconds, 0 = unlimited
+	FriendlyFire    bool `json:"friendly_fire"`
+	MaxPlayers      int  `json:"max_players"`
+	ScorePerKill    int  `json:"score_per_kill"`
+	KillsPerUpgrade int  `json:"kills_per_upgrade"` // kills needed per weapon upgrade (0 = disabled)
 }
 
 func DefaultGameSettings() GameSettings {
 	return GameSettings{
-		RespawnDelay: 5,
-		GameDuration: 300,
-		FriendlyFire: false,
-		MaxPlayers:   20,
+		RespawnDelay:    5,
+		GameDuration:    300,
+		FriendlyFire:    false,
+		MaxPlayers:      20,
+		ScorePerKill:    100,
+		KillsPerUpgrade: 3,
 	}
+}
+
+// Validate checks that game settings are within acceptable bounds.
+func (s GameSettings) Validate() error {
+	if s.MaxPlayers < 2 || s.MaxPlayers > 100 {
+		return fmt.Errorf("%w: max_players must be between 2 and 100", ErrValidation)
+	}
+	if s.RespawnDelay < 0 || s.RespawnDelay > 300 {
+		return fmt.Errorf("%w: respawn_delay must be between 0 and 300", ErrValidation)
+	}
+	if s.GameDuration < 0 || s.GameDuration > 7200 {
+		return fmt.Errorf("%w: game_duration must be between 0 and 7200", ErrValidation)
+	}
+	if s.ScorePerKill < 0 || s.ScorePerKill > 10000 {
+		return fmt.Errorf("%w: score_per_kill must be between 0 and 10000", ErrValidation)
+	}
+	if s.KillsPerUpgrade < 0 || s.KillsPerUpgrade > 50 {
+		return fmt.Errorf("%w: kills_per_upgrade must be between 0 and 50", ErrValidation)
+	}
+	return nil
 }
 
 type Team struct {
@@ -86,15 +113,17 @@ type Team struct {
 }
 
 type Player struct {
-	ID       string
-	GameID   string
-	TeamID   *string
-	DeviceID string
-	Nickname string
-	Score    int
-	Kills    int
-	Deaths   int
-	IsAlive  bool
+	ID          string
+	GameID      string
+	TeamID      *string
+	DeviceID    string
+	Nickname    string
+	Score       int
+	Kills       int
+	Deaths      int
+	IsAlive     bool
+	KillStreak  int // consecutive kills without dying (resets on death)
+	WeaponLevel int // current weapon tier (resets on death)
 }
 
 type GameEvent struct {
@@ -103,4 +132,26 @@ type GameEvent struct {
 	Type      string
 	Payload   map[string]any
 	Timestamp time.Time
+}
+
+// ── Aggregates ──
+
+// GameFull is the full state of a game with teams, players and events.
+type GameFull struct {
+	Game    Game
+	Teams   []Team
+	Players []Player
+	Events  []GameEvent
+}
+
+// HitResult carries the outcome of a hit event.
+type HitResult struct {
+	Kill           bool
+	AttackerID     string
+	VictimID       string
+	AttackerScore  int
+	AttackerKills  int
+	WeaponUpgraded bool // true if this kill triggered a weapon upgrade
+	WeaponLevel    int  // attacker's current weapon level after this kill
+	KillStreak     int  // attacker's current kill streak after this kill
 }

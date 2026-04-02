@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
@@ -12,31 +14,31 @@ type PlayerRepo struct{ db *sql.DB }
 func NewPlayerRepo(db *sql.DB) *PlayerRepo { return &PlayerRepo{db: db} }
 
 func (r *PlayerRepo) Create(ctx context.Context, p *domain.Player) error {
-	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO players (id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
+		`INSERT INTO players (id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
 		p.ID, p.GameID, nilIfEmpty(p.TeamID), p.DeviceID, p.Nickname,
-		p.Score, p.Kills, p.Deaths, p.IsAlive,
+		p.Score, p.Kills, p.Deaths, p.IsAlive, p.KillStreak, p.WeaponLevel,
 	)
 	return err
 }
 
 func (r *PlayerRepo) GetByID(ctx context.Context, id string) (*domain.Player, error) {
-	return r.scanPlayer(r.db.QueryRowContext(ctx,
-		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive FROM players WHERE id = $1`, id,
+	return r.scanPlayer(getExecutor(ctx, r.db).QueryRowContext(ctx,
+		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level FROM players WHERE id = $1`, id,
 	))
 }
 
 func (r *PlayerRepo) GetByGameAndDevice(ctx context.Context, gameID, deviceID string) (*domain.Player, error) {
-	return r.scanPlayer(r.db.QueryRowContext(ctx,
-		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive
+	return r.scanPlayer(getExecutor(ctx, r.db).QueryRowContext(ctx,
+		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level
 		 FROM players WHERE game_id = $1 AND device_id = $2`, gameID, deviceID,
 	))
 }
 
 func (r *PlayerRepo) ListByGame(ctx context.Context, gameID string) ([]domain.Player, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive FROM players WHERE game_id = $1 ORDER BY score DESC`, gameID,
+	rows, err := getExecutor(ctx, r.db).QueryContext(ctx,
+		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level FROM players WHERE game_id = $1 ORDER BY score DESC`, gameID,
 	)
 	if err != nil {
 		return nil, err
@@ -46,8 +48,8 @@ func (r *PlayerRepo) ListByGame(ctx context.Context, gameID string) ([]domain.Pl
 }
 
 func (r *PlayerRepo) ListByTeam(ctx context.Context, teamID string) ([]domain.Player, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive FROM players WHERE team_id = $1 ORDER BY score DESC`, teamID,
+	rows, err := getExecutor(ctx, r.db).QueryContext(ctx,
+		`SELECT id, game_id, team_id, device_id, nickname, score, kills, deaths, is_alive, kill_streak, weapon_level FROM players WHERE team_id = $1 ORDER BY score DESC`, teamID,
 	)
 	if err != nil {
 		return nil, err
@@ -57,15 +59,63 @@ func (r *PlayerRepo) ListByTeam(ctx context.Context, teamID string) ([]domain.Pl
 }
 
 func (r *PlayerRepo) Update(ctx context.Context, p *domain.Player) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE players SET team_id=$1, nickname=$2, score=$3, kills=$4, deaths=$5, is_alive=$6 WHERE id=$7`,
-		nilIfEmpty(p.TeamID), p.Nickname, p.Score, p.Kills, p.Deaths, p.IsAlive, p.ID,
+	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
+		`UPDATE players SET team_id=$1, nickname=$2, score=$3, kills=$4, deaths=$5, is_alive=$6, kill_streak=$7, weapon_level=$8 WHERE id=$9`,
+		nilIfEmpty(p.TeamID), p.Nickname, p.Score, p.Kills, p.Deaths, p.IsAlive, p.KillStreak, p.WeaponLevel, p.ID,
 	)
 	return err
 }
 
 func (r *PlayerRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM players WHERE id = $1`, id)
+	_, err := getExecutor(ctx, r.db).ExecContext(ctx, `DELETE FROM players WHERE id = $1`, id)
+	return err
+}
+
+// KillPlayer atomically sets is_alive=false, increments deaths, and resets kill_streak + weapon_level.
+// Returns false if the player was already dead (prevents duplicate kills).
+func (r *PlayerRepo) KillPlayer(ctx context.Context, playerID string) (bool, error) {
+	res, err := getExecutor(ctx, r.db).ExecContext(ctx,
+		`UPDATE players SET is_alive = false, deaths = deaths + 1, kill_streak = 0, weapon_level = 0
+		 WHERE id = $1 AND is_alive = true`,
+		playerID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("kill player %s: %w", playerID, err)
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+// AddKillScore atomically increments kills, score, and kill_streak.
+// If killsPerUpgrade > 0 and the new streak hits the threshold, weapon_level is also incremented.
+// Returns the updated streak state.
+func (r *PlayerRepo) AddKillScore(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error) {
+	row := getExecutor(ctx, r.db).QueryRowContext(ctx,
+		`UPDATE players SET
+			kills = kills + 1,
+			score = score + $1,
+			kill_streak = kill_streak + 1,
+			weapon_level = CASE
+				WHEN $2 > 0 AND (kill_streak + 1) % $2 = 0 THEN weapon_level + 1
+				ELSE weapon_level
+			END
+		 WHERE id = $3
+		 RETURNING kill_streak, weapon_level`,
+		score, killsPerUpgrade, playerID,
+	)
+	var result domain.KillScoreResult
+	if err := row.Scan(&result.KillStreak, &result.WeaponLevel); err != nil {
+		return nil, fmt.Errorf("add kill score %s: %w", playerID, err)
+	}
+	return &result, nil
+}
+
+// Respawn atomically sets is_alive=true.
+func (r *PlayerRepo) Respawn(ctx context.Context, playerID string) error {
+	_, err := getExecutor(ctx, r.db).ExecContext(ctx,
+		`UPDATE players SET is_alive = true WHERE id = $1`,
+		playerID,
+	)
 	return err
 }
 
@@ -73,8 +123,8 @@ func (r *PlayerRepo) scanPlayer(row *sql.Row) (*domain.Player, error) {
 	p := &domain.Player{}
 	var teamID sql.NullString
 	err := row.Scan(&p.ID, &p.GameID, &teamID, &p.DeviceID, &p.Nickname,
-		&p.Score, &p.Kills, &p.Deaths, &p.IsAlive)
-	if err == sql.ErrNoRows {
+		&p.Score, &p.Kills, &p.Deaths, &p.IsAlive, &p.KillStreak, &p.WeaponLevel)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrNotFound
 	}
 	if err != nil {
@@ -92,7 +142,7 @@ func (r *PlayerRepo) scanPlayers(rows *sql.Rows) ([]domain.Player, error) {
 		var p domain.Player
 		var teamID sql.NullString
 		if err := rows.Scan(&p.ID, &p.GameID, &teamID, &p.DeviceID, &p.Nickname,
-			&p.Score, &p.Kills, &p.Deaths, &p.IsAlive); err != nil {
+			&p.Score, &p.Kills, &p.Deaths, &p.IsAlive, &p.KillStreak, &p.WeaponLevel); err != nil {
 			return nil, err
 		}
 		if teamID.Valid {

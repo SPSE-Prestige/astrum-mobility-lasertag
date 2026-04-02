@@ -1,16 +1,17 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
 
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
 
 type DeviceHandler struct {
-	deviceUC *usecase.DeviceUseCase
+	deviceUC domain.DeviceUseCasePort
 }
 
-func NewDeviceHandler(deviceUC *usecase.DeviceUseCase) *DeviceHandler {
+func NewDeviceHandler(deviceUC domain.DeviceUseCasePort) *DeviceHandler {
 	return &DeviceHandler{deviceUC: deviceUC}
 }
 
@@ -27,7 +28,8 @@ func NewDeviceHandler(deviceUC *usecase.DeviceUseCase) *DeviceHandler {
 func (h *DeviceHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	devices, err := h.deviceUC.ListAll(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		slog.Error("list all devices failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list devices")
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(devices, toDeviceResponse))
@@ -46,7 +48,8 @@ func (h *DeviceHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 func (h *DeviceHandler) ListAvailable(w http.ResponseWriter, r *http.Request) {
 	devices, err := h.deviceUC.ListAvailable(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		slog.Error("list available devices failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list available devices")
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(devices, toDeviceResponse))

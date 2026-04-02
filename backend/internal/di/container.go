@@ -2,12 +2,13 @@ package di
 
 import (
 	"database/sql"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/config"
 	httpdelivery "github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/delivery/http"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/delivery/ws"
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/infrastructure/mqtt"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/repository/postgres"
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
@@ -21,9 +22,10 @@ type Container struct {
 	Handler    http.Handler
 	Config     *config.Config
 
-	// UseCases (exposed for background tasks)
-	DeviceUC *usecase.DeviceUseCase
-	GameUC   *usecase.GameUseCase
+	// Use case ports for background tasks
+	AuthUC   domain.AuthUseCasePort
+	DeviceUC domain.DeviceUseCasePort
+	GameUC   domain.GameUseCasePort
 }
 
 func NewContainer(cfg *config.Config) (*Container, error) {
@@ -32,7 +34,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("[DI] database connected")
+	slog.Info("database connected")
+
+	txMgr := postgres.NewTxManager(db)
 
 	// Repositories
 	userRepo := postgres.NewUserRepo(db)
@@ -44,24 +48,24 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	eventRepo := postgres.NewEventRepo(db)
 
 	// Use cases
-	authUC := usecase.NewAuthUseCase(userRepo, sessionRepo)
+	authUC := usecase.NewAuthUseCase(userRepo, sessionRepo, cfg.SessionTTL)
 	deviceUC := usecase.NewDeviceUseCase(deviceRepo)
-	gameUC := usecase.NewGameUseCase(gameRepo, teamRepo, playerRepo, deviceRepo, eventRepo)
-	hitUC := usecase.NewHitUseCase(gameRepo, playerRepo, eventRepo)
+	gameUC := usecase.NewGameUseCase(gameRepo, teamRepo, playerRepo, deviceRepo, eventRepo, txMgr)
+	hitUC := usecase.NewHitUseCase(gameRepo, playerRepo, eventRepo, txMgr)
 
 	// WebSocket hub
 	wsHub := ws.NewHub()
 
-	// MQTT client
-	mqttClient := mqtt.NewClient(cfg.MQTTBroker, deviceUC, hitUC, gameUC, wsHub.Broadcast)
+	// MQTT client (depends on port interfaces, not concrete types)
+	mqttClient := mqtt.NewClient(cfg.MQTTBroker, deviceUC, hitUC, gameUC, wsHub)
 
-	// HTTP handlers
+	// HTTP handlers (depend on port interfaces)
 	authHandler := httpdelivery.NewAuthHandler(authUC)
 	gameHandler := httpdelivery.NewGameHandler(gameUC, mqttClient)
 	deviceHandler := httpdelivery.NewDeviceHandler(deviceUC)
 
 	// Router
-	handler := httpdelivery.NewRouter(authUC, gameHandler, deviceHandler, authHandler, wsHub)
+	handler := httpdelivery.NewRouter(cfg, authUC, gameHandler, deviceHandler, authHandler, wsHub, db, mqttClient)
 
 	return &Container{
 		DB:         db,
@@ -69,6 +73,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		MQTTClient: mqttClient,
 		Handler:    handler,
 		Config:     cfg,
+		AuthUC:     authUC,
 		DeviceUC:   deviceUC,
 		GameUC:     gameUC,
 	}, nil

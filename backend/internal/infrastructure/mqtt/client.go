@@ -4,30 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
 
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
 
 // Client wraps the Paho MQTT client for device communication.
+// Depends on domain port interfaces, not concrete use cases.
 type Client struct {
 	client    pahomqtt.Client
-	deviceUC  *usecase.DeviceUseCase
-	hitUC     *usecase.HitUseCase
-	gameUC    *usecase.GameUseCase
-	broadcast func(msg any) // WebSocket broadcast callback
+	deviceUC  domain.DeviceUseCasePort
+	hitUC     domain.HitUseCasePort
+	gameUC    domain.GameUseCasePort
+	broadcast domain.WSBroadcaster
 }
 
 func NewClient(
 	brokerURL string,
-	deviceUC *usecase.DeviceUseCase,
-	hitUC *usecase.HitUseCase,
-	gameUC *usecase.GameUseCase,
-	broadcast func(msg any),
+	deviceUC domain.DeviceUseCasePort,
+	hitUC domain.HitUseCasePort,
+	gameUC domain.GameUseCasePort,
+	broadcast domain.WSBroadcaster,
 ) *Client {
 	c := &Client{
 		deviceUC:  deviceUC,
@@ -36,16 +38,19 @@ func NewClient(
 		broadcast: broadcast,
 	}
 
+	// Unique client ID per instance to allow multiple replicas
+	clientID := fmt.Sprintf("lasertag-backend-%s", uuid.New().String()[:8])
+
 	opts := pahomqtt.NewClientOptions().
 		AddBroker(brokerURL).
-		SetClientID("lasertag-backend").
+		SetClientID(clientID).
 		SetAutoReconnect(true).
 		SetOnConnectHandler(func(_ pahomqtt.Client) {
-			log.Println("[MQTT] connected to broker")
+			slog.Info("mqtt connected to broker", "client_id", clientID)
 			c.subscribe()
 		}).
 		SetConnectionLostHandler(func(_ pahomqtt.Client, err error) {
-			log.Printf("[MQTT] connection lost: %v", err)
+			slog.Error("mqtt connection lost", "error", err)
 		})
 
 	c.client = pahomqtt.NewClient(opts)
@@ -62,28 +67,40 @@ func (c *Client) Disconnect() {
 	c.client.Disconnect(1000)
 }
 
+// Ping checks if MQTT is connected (used by health check).
+func (c *Client) Ping() bool {
+	return c.client.IsConnected()
+}
+
 func (c *Client) subscribe() {
 	subs := map[string]byte{
-		"device/+/register":  0,
+		"device/+/register":  1,
 		"device/+/heartbeat": 0,
-		"device/+/event":     0,
+		"device/+/event":     1,
 	}
 	token := c.client.SubscribeMultiple(subs, c.handleMessage)
 	token.Wait()
 	if token.Error() != nil {
-		log.Printf("[MQTT] subscribe error: %v", token.Error())
+		slog.Error("mqtt subscribe error", "error", token.Error())
+		return
 	}
-	log.Println("[MQTT] subscribed to device topics")
+	slog.Info("mqtt subscribed to device topics")
 }
 
 func (c *Client) handleMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
 	topic := msg.Topic()
 	parts := strings.Split(topic, "/")
 	if len(parts) < 3 {
+		slog.Warn("mqtt invalid topic format", "topic", topic)
 		return
 	}
 	deviceID := parts[1]
 	action := parts[2]
+
+	if deviceID == "" {
+		slog.Warn("mqtt empty device ID in topic", "topic", topic)
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -95,17 +112,19 @@ func (c *Client) handleMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
 		c.handleHeartbeat(ctx, deviceID)
 	case "event":
 		c.handleEvent(ctx, deviceID, msg.Payload())
+	default:
+		slog.Warn("mqtt unknown action", "action", action, "device_id", deviceID)
 	}
 }
 
 func (c *Client) handleRegister(ctx context.Context, deviceID string) {
 	device, err := c.deviceUC.Register(ctx, deviceID)
 	if err != nil {
-		log.Printf("[MQTT] register error for %s: %v", deviceID, err)
+		slog.Error("mqtt register failed", "device_id", deviceID, "error", err)
 		return
 	}
-	log.Printf("[MQTT] device registered: %s", deviceID)
-	c.broadcast(map[string]any{
+	slog.Info("mqtt device registered", "device_id", deviceID)
+	c.broadcast.Broadcast(map[string]any{
 		"type":   "device_registered",
 		"device": device,
 	})
@@ -113,59 +132,75 @@ func (c *Client) handleRegister(ctx context.Context, deviceID string) {
 
 func (c *Client) handleHeartbeat(ctx context.Context, deviceID string) {
 	if err := c.deviceUC.Heartbeat(ctx, deviceID); err != nil {
-		log.Printf("[MQTT] heartbeat error for %s: %v", deviceID, err)
+		slog.Error("mqtt heartbeat failed", "device_id", deviceID, "error", err)
 	}
 }
 
 type hitEvent struct {
 	GameID   string `json:"game_id"`
-	VictimID string `json:"victim_id"` // victim device_id
+	VictimID string `json:"victim_id"`
 }
 
 func (c *Client) handleEvent(ctx context.Context, attackerDeviceID string, payload []byte) {
 	var evt hitEvent
 	if err := json.Unmarshal(payload, &evt); err != nil {
-		log.Printf("[MQTT] invalid event payload from %s: %v", attackerDeviceID, err)
+		slog.Error("mqtt invalid event payload", "device_id", attackerDeviceID, "error", err)
+		return
+	}
+
+	if evt.GameID == "" || evt.VictimID == "" {
+		slog.Warn("mqtt event missing required fields", "device_id", attackerDeviceID)
 		return
 	}
 
 	result, err := c.hitUC.ProcessHit(ctx, evt.GameID, attackerDeviceID, evt.VictimID)
 	if err != nil {
-		log.Printf("[MQTT] hit rejected (%s -> %s): %v", attackerDeviceID, evt.VictimID, err)
+		slog.Warn("mqtt hit rejected", "attacker", attackerDeviceID, "victim", evt.VictimID, "error", err)
 		return
 	}
 
-	log.Printf("[MQTT] kill: %s -> %s", attackerDeviceID, evt.VictimID)
+	slog.Info("mqtt kill processed", "attacker", attackerDeviceID, "victim", evt.VictimID)
 
-	// Notify attacker device of confirmed kill (include score+kills for CAN→MP135)
 	c.SendCommand(attackerDeviceID, map[string]any{
-		"action":    "kill_confirmed",
-		"victim_id": evt.VictimID,
-		"score":     result.AttackerScore,
-		"kills":     result.AttackerKills,
+		"action":       "kill_confirmed",
+		"victim_id":    evt.VictimID,
+		"score":        result.AttackerScore,
+		"kills":        result.AttackerKills,
+		"kill_streak":  result.KillStreak,
+		"weapon_level": result.WeaponLevel,
 	})
 
-	// Notify victim device to die
+	// Send weapon upgrade command if upgrade occurred
+	if result.WeaponUpgraded {
+		c.SendCommand(attackerDeviceID, map[string]any{
+			"action":       "weapon_upgrade",
+			"weapon_level": result.WeaponLevel,
+			"kill_streak":  result.KillStreak,
+		})
+		slog.Info("mqtt weapon upgrade", "attacker", attackerDeviceID, "level", result.WeaponLevel)
+	}
+
 	c.SendCommand(evt.VictimID, map[string]any{
 		"action": "die",
 	})
 
-	// Schedule respawn after delay
+	// Schedule respawn
 	game, err := c.gameUC.GetGame(ctx, evt.GameID)
 	if err == nil && game.Settings.RespawnDelay > 0 {
 		go func() {
-			time.Sleep(time.Duration(game.Settings.RespawnDelay) * time.Second)
+			timer := time.NewTimer(time.Duration(game.Settings.RespawnDelay) * time.Second)
+			defer timer.Stop()
+
+			<-timer.C
 			rctx, rcancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer rcancel()
+
 			if err := c.hitUC.Respawn(rctx, evt.GameID, evt.VictimID); err != nil {
-				log.Printf("[MQTT] respawn error for %s: %v", evt.VictimID, err)
+				slog.Error("mqtt respawn failed", "device_id", evt.VictimID, "error", err)
 				return
 			}
-			c.SendCommand(evt.VictimID, map[string]any{
-				"action": "respawn",
-			})
-			// Broadcast respawn to dashboard
-			c.broadcast(map[string]any{
+			c.SendCommand(evt.VictimID, map[string]any{"action": "respawn"})
+			c.broadcast.Broadcast(map[string]any{
 				"type":      "respawn",
 				"game_id":   evt.GameID,
 				"device_id": evt.VictimID,
@@ -173,22 +208,34 @@ func (c *Client) handleEvent(ctx context.Context, attackerDeviceID string, paylo
 		}()
 	}
 
-	// Broadcast kill to dashboard
-	c.broadcast(map[string]any{
+	broadcastPayload := map[string]any{
 		"type":    "kill",
 		"game_id": evt.GameID,
 		"result":  result,
-	})
+	}
+	if result.WeaponUpgraded {
+		broadcastPayload["weapon_upgrade"] = map[string]any{
+			"player_id":    result.AttackerID,
+			"weapon_level": result.WeaponLevel,
+			"kill_streak":  result.KillStreak,
+		}
+	}
+	c.broadcast.Broadcast(broadcastPayload)
 }
 
 // SendCommand publishes a command to a specific device.
 func (c *Client) SendCommand(deviceID string, command any) {
 	data, err := json.Marshal(command)
 	if err != nil {
+		slog.Error("mqtt marshal command error", "device_id", deviceID, "error", err)
 		return
 	}
 	topic := fmt.Sprintf("device/%s/command", deviceID)
-	c.client.Publish(topic, 1, false, data)
+	token := c.client.Publish(topic, 1, false, data)
+	token.Wait()
+	if token.Error() != nil {
+		slog.Error("mqtt publish error", "topic", topic, "error", token.Error())
+	}
 }
 
 // PublishGameStart notifies all players' devices that the game has started.
@@ -205,7 +252,7 @@ func (c *Client) PublishGameStart(deviceIDs []string, gameID string) {
 func (c *Client) PublishGameEnd(deviceIDs []string) {
 	for _, did := range deviceIDs {
 		c.SendCommand(did, map[string]any{
-			"action":  "game_end",
+			"action": "game_end",
 		})
 	}
 }
