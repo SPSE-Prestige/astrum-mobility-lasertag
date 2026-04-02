@@ -39,9 +39,9 @@ type GameRepository interface {
 
 type TeamRepository interface {
 	Create(ctx context.Context, t *Team) error
-	GetByID(ctx context.Context, id string) (*Team, error)
+	GetByID(ctx context.Context, id int) (*Team, error)
 	ListByGame(ctx context.Context, gameID string) ([]Team, error)
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id int) error
 }
 
 type PlayerRepository interface {
@@ -51,7 +51,7 @@ type PlayerRepository interface {
 	// FindActivePlayerByDevice finds a player with this device in a running game (if any).
 	FindActivePlayerByDevice(ctx context.Context, deviceID string) (*Player, *Game, error)
 	ListByGame(ctx context.Context, gameID string) ([]Player, error)
-	ListByTeam(ctx context.Context, teamID string) ([]Player, error)
+	ListByTeam(ctx context.Context, teamID int) ([]Player, error)
 	Update(ctx context.Context, p *Player) error
 	Delete(ctx context.Context, id string) error
 	// KillPlayer atomically sets is_alive=false, increments deaths, resets kill_streak and weapon_level.
@@ -122,13 +122,13 @@ type GameUseCasePort interface {
 	UpdateSettings(ctx context.Context, gameID string, settings GameSettings) (*Game, error)
 	AddTeam(ctx context.Context, gameID, name, color string) (*Team, error)
 	ListTeams(ctx context.Context, gameID string) ([]Team, error)
-	RemoveTeam(ctx context.Context, gameID, teamID string) error
-	AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*Player, error)
+	RemoveTeam(ctx context.Context, gameID string, teamID int) error
+	AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *int) (*Player, error)
 	RemovePlayer(ctx context.Context, gameID, playerID string) error
 	ListPlayers(ctx context.Context, gameID string) ([]Player, error)
 	GetLeaderboard(ctx context.Context, gameID string) ([]Player, error)
 	ListEvents(ctx context.Context, gameID string) ([]GameEvent, error)
-	UpdatePlayerTeam(ctx context.Context, playerID string, teamID *string) error
+	UpdatePlayerTeam(ctx context.Context, playerID string, teamID *int) error
 	ShouldAutoEnd(ctx context.Context, gameID string) (bool, error)
 	RemainingTime(game *Game) int
 	// GetPlayerSession returns a player's game session by their session PIN code.

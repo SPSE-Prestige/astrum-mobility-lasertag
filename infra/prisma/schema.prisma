@@ -79,7 +79,7 @@ model Game {
 }
 
 model Team {
-  id     String @id @default(uuid())
+  id     Int    @id @default(autoincrement())
   gameId String @map("game_id")
   name   String
   color  String
@@ -93,7 +93,7 @@ model Team {
 model Player {
   id          String  @id @default(uuid())
   gameId      String  @map("game_id")
-  teamId      String? @map("team_id")
+  teamId      Int?    @map("team_id")
   deviceId    String  @map("device_id")
   nickname    String
   score       Int     @default(0)

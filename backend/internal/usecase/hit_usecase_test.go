@@ -10,6 +10,7 @@ import (
 )
 
 func ptrString(s string) *string { return &s }
+func ptrInt(i int) *int { return &i }
 
 func newRunningGame() *domain.Game {
 	return &domain.Game{
@@ -36,12 +37,12 @@ func TestProcessHit_Success(t *testing.T) {
 	game := newRunningGame()
 	attacker := &domain.Player{
 		ID: "player-1", GameID: "game-1", DeviceID: "dev-A",
-		TeamID: ptrString("team-1"), Nickname: "Alice", IsAlive: true,
+		TeamID: ptrInt(1), Nickname: "Alice", IsAlive: true,
 		Score: 0, Kills: 0,
 	}
 	victim := &domain.Player{
 		ID: "player-2", GameID: "game-1", DeviceID: "dev-B",
-		TeamID: ptrString("team-2"), Nickname: "Bob", IsAlive: true,
+		TeamID: ptrInt(2), Nickname: "Bob", IsAlive: true,
 		Score: 0, Kills: 0,
 	}
 
@@ -159,11 +160,11 @@ func TestProcessHit_VictimAlreadyDead(t *testing.T) {
 	game := newRunningGame()
 	attacker := &domain.Player{
 		ID: "player-1", GameID: "game-1", DeviceID: "dev-A",
-		TeamID: ptrString("team-1"), IsAlive: true,
+		TeamID: ptrInt(1), IsAlive: true,
 	}
 	victim := &domain.Player{
 		ID: "player-2", GameID: "game-1", DeviceID: "dev-B",
-		TeamID: ptrString("team-2"), IsAlive: false,
+		TeamID: ptrInt(2), IsAlive: false,
 	}
 
 	games := &mocks.MockGameRepository{
@@ -190,7 +191,7 @@ func TestProcessHit_VictimAlreadyDead(t *testing.T) {
 func TestProcessHit_FriendlyFire(t *testing.T) {
 	game := newRunningGame()
 	game.Settings.FriendlyFire = false
-	sameTeam := ptrString("team-1")
+	sameTeam := ptrInt(1)
 
 	attacker := &domain.Player{
 		ID: "player-1", GameID: "game-1", DeviceID: "dev-A",
@@ -225,7 +226,7 @@ func TestProcessHit_FriendlyFire(t *testing.T) {
 func TestProcessHit_FriendlyFireAllowed(t *testing.T) {
 	game := newRunningGame()
 	game.Settings.FriendlyFire = true
-	sameTeam := ptrString("team-1")
+	sameTeam := ptrInt(1)
 
 	attacker := &domain.Player{
 		ID: "player-1", GameID: "game-1", DeviceID: "dev-A",

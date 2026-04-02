@@ -98,7 +98,6 @@ func (uc *GameUseCase) AddTeam(ctx context.Context, gameID, name, color string) 
 	}
 
 	team := &domain.Team{
-		ID:     uuid.New().String(),
 		GameID: gameID,
 		Name:   name,
 		Color:  color,
@@ -114,7 +113,7 @@ func (uc *GameUseCase) ListTeams(ctx context.Context, gameID string) ([]domain.T
 }
 
 // RemoveTeam removes a team only if the game is in lobby state.
-func (uc *GameUseCase) RemoveTeam(ctx context.Context, gameID, teamID string) error {
+func (uc *GameUseCase) RemoveTeam(ctx context.Context, gameID string, teamID int) error {
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("get game for remove team: %w", err)
@@ -126,7 +125,7 @@ func (uc *GameUseCase) RemoveTeam(ctx context.Context, gameID, teamID string) er
 }
 
 // AddPlayer adds a device as a player to a game. The device must be online.
-func (uc *GameUseCase) AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*domain.Player, error) {
+func (uc *GameUseCase) AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *int) (*domain.Player, error) {
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
 		return nil, fmt.Errorf("get game for add player: %w", err)
@@ -412,7 +411,7 @@ func (uc *GameUseCase) ListEvents(ctx context.Context, gameID string) ([]domain.
 	return uc.events.ListByGame(ctx, gameID)
 }
 
-func (uc *GameUseCase) UpdatePlayerTeam(ctx context.Context, playerID string, teamID *string) error {
+func (uc *GameUseCase) UpdatePlayerTeam(ctx context.Context, playerID string, teamID *int) error {
 	player, err := uc.players.GetByID(ctx, playerID)
 	if err != nil {
 		return fmt.Errorf("get player: %w", err)

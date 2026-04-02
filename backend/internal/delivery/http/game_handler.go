@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
@@ -306,7 +307,12 @@ func (h *GameHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 //	@Router		/games/{id}/teams/{teamId} [delete]
 func (h *GameHandler) RemoveTeam(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
-	teamID := r.PathValue("teamId")
+	teamIDStr := r.PathValue("teamId")
+	teamID, err := strconv.Atoi(teamIDStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "team_id must be an integer")
+		return
+	}
 	if err := h.gameUC.RemoveTeam(r.Context(), gameID, teamID); err != nil {
 		handleDomainError(w, err)
 		return

@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -173,15 +174,19 @@ type hitEvent struct {
 }
 
 // deviceEvent is the generic envelope for all device event payloads.
+// VictimID uses json.Number so it accepts both string ("6") and number (6)
+// from ESP32 firmware.
 type deviceEvent struct {
-	Action   string `json:"action"`
-	GameID   string `json:"game_id"`
-	VictimID string `json:"victim_id"`
+	Action   string          `json:"action"`
+	GameID   string          `json:"game_id"`
+	VictimID json.Number     `json:"victim_id"`
 }
 
 func (c *Client) handleEvent(ctx context.Context, attackerDeviceID string, payload []byte) {
+	dec := json.NewDecoder(bytes.NewReader(payload))
+	dec.UseNumber()
 	var evt deviceEvent
-	if err := json.Unmarshal(payload, &evt); err != nil {
+	if err := dec.Decode(&evt); err != nil {
 		slog.Error("mqtt invalid event payload", "device_id", attackerDeviceID, "error", err)
 		return
 	}
@@ -210,22 +215,23 @@ func (c *Client) handleShot(ctx context.Context, deviceID string, evt *deviceEve
 }
 
 func (c *Client) handleHit(ctx context.Context, attackerDeviceID string, evt *deviceEvent) {
-	if evt.GameID == "" || evt.VictimID == "" {
+	victimID := evt.VictimID.String()
+	if evt.GameID == "" || victimID == "" {
 		slog.Warn("mqtt event missing required fields", "device_id", attackerDeviceID)
 		return
 	}
 
-	result, err := c.hitUC.ProcessHit(ctx, evt.GameID, attackerDeviceID, evt.VictimID)
+	result, err := c.hitUC.ProcessHit(ctx, evt.GameID, attackerDeviceID, victimID)
 	if err != nil {
-		slog.Warn("mqtt hit rejected", "attacker", attackerDeviceID, "victim", evt.VictimID, "error", err)
+		slog.Warn("mqtt hit rejected", "attacker", attackerDeviceID, "victim", victimID, "error", err)
 		return
 	}
 
-	slog.Info("mqtt kill processed", "attacker", attackerDeviceID, "victim", evt.VictimID)
+	slog.Info("mqtt kill processed", "attacker", attackerDeviceID, "victim", victimID)
 
 	c.SendCommand(attackerDeviceID, map[string]any{
 		"action":       "kill_confirmed",
-		"victim_id":    evt.VictimID,
+		"victim_id":    victimID,
 		"score":        result.AttackerScore,
 		"kills":        result.AttackerKills,
 		"kill_streak":  result.KillStreak,
@@ -242,7 +248,7 @@ func (c *Client) handleHit(ctx context.Context, attackerDeviceID string, evt *de
 		slog.Info("mqtt weapon upgrade", "attacker", attackerDeviceID, "level", result.WeaponLevel)
 	}
 
-	c.SendCommand(evt.VictimID, map[string]any{
+	c.SendCommand(victimID, map[string]any{
 		"action": "die",
 	})
 
@@ -257,15 +263,15 @@ func (c *Client) handleHit(ctx context.Context, attackerDeviceID string, evt *de
 			rctx, rcancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer rcancel()
 
-			if err := c.hitUC.Respawn(rctx, evt.GameID, evt.VictimID); err != nil {
-				slog.Error("mqtt respawn failed", "device_id", evt.VictimID, "error", err)
+			if err := c.hitUC.Respawn(rctx, evt.GameID, victimID); err != nil {
+				slog.Error("mqtt respawn failed", "device_id", victimID, "error", err)
 				return
 			}
-			c.SendCommand(evt.VictimID, map[string]any{"action": "respawn"})
+			c.SendCommand(victimID, map[string]any{"action": "respawn"})
 			c.broadcast.Broadcast(map[string]any{
 				"type":      "respawn",
 				"game_id":   evt.GameID,
-				"device_id": evt.VictimID,
+				"device_id": victimID,
 			})
 		}()
 	}
