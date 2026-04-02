@@ -151,13 +151,19 @@ func (uc *GameUseCase) AddPlayer(ctx context.Context, gameID, deviceID, nickname
 		return nil, domain.ErrDeviceInGame
 	}
 
+	sessionCode, err := uc.generateUniqueSessionCode(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("generate session code: %w", err)
+	}
+
 	player := &domain.Player{
-		ID:       uuid.New().String(),
-		GameID:   gameID,
-		TeamID:   teamID,
-		DeviceID: deviceID,
-		Nickname: nickname,
-		IsAlive:  true,
+		ID:          uuid.New().String(),
+		GameID:      gameID,
+		TeamID:      teamID,
+		DeviceID:    deviceID,
+		Nickname:    nickname,
+		IsAlive:     true,
+		SessionCode: sessionCode,
 	}
 	if err := uc.players.Create(ctx, player); err != nil {
 		return nil, fmt.Errorf("create player: %w", err)
@@ -312,6 +318,51 @@ func generateGameCode() string {
 		b[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(b)
+}
+
+// generateUniqueSessionCode generates a unique 6-char session PIN with retry.
+func (uc *GameUseCase) generateUniqueSessionCode(ctx context.Context) (string, error) {
+	const maxRetries = 10
+	for i := 0; i < maxRetries; i++ {
+		code := generateGameCode()
+		_, err := uc.players.GetBySessionCode(ctx, code)
+		if errors.Is(err, domain.ErrNotFound) {
+			return code, nil // code is unique
+		}
+		if err != nil {
+			return "", fmt.Errorf("check session code uniqueness: %w", err)
+		}
+		// code exists, retry
+	}
+	return "", fmt.Errorf("failed to generate unique session code after %d retries", maxRetries)
+}
+
+// GetPlayerSession returns a player's session info by their PIN code (for mobile app).
+func (uc *GameUseCase) GetPlayerSession(ctx context.Context, code string) (*domain.PlayerSession, error) {
+	player, err := uc.players.GetBySessionCode(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("get player by session code: %w", err)
+	}
+
+	game, err := uc.games.GetByID(ctx, player.GameID)
+	if err != nil {
+		return nil, fmt.Errorf("get game for session: %w", err)
+	}
+
+	session := &domain.PlayerSession{
+		Player:        *player,
+		Game:          *game,
+		RemainingTime: uc.RemainingTime(game),
+	}
+
+	if player.TeamID != nil {
+		team, err := uc.teams.GetByID(ctx, *player.TeamID)
+		if err == nil {
+			session.Team = team
+		}
+	}
+
+	return session, nil
 }
 
 // GetGameFull returns a game with its teams, players, and events.

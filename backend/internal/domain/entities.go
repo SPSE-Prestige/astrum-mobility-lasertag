@@ -125,6 +125,7 @@ type Player struct {
 	KillStreak  int // consecutive kills without dying (resets on death)
 	WeaponLevel int // current weapon tier (resets on death)
 	ShotsFired  int // total shots fired this game (never resets)
+	SessionCode string // unique 6-char PIN for mobile app access
 }
 
 type GameEvent struct {
@@ -162,4 +163,12 @@ type ReconnectInfo struct {
 	Player        Player
 	Game          Game
 	RemainingTime int // seconds remaining (-1 = unlimited)
+}
+
+// PlayerSession is the public view of a player's game session for the mobile app.
+type PlayerSession struct {
+	Player        Player
+	Game          Game
+	Team          *Team // nil if unassigned
+	RemainingTime int   // seconds remaining (-1 = unlimited)
 }

@@ -91,7 +91,43 @@ func toPlayerResponse(p domain.Player) PlayerResponse {
 		KillStreak:  p.KillStreak,
 		WeaponLevel: p.WeaponLevel,
 		ShotsFired:  p.ShotsFired,
+		SessionCode: p.SessionCode,
 	}
+}
+
+func toPlayerSessionResponse(s *domain.PlayerSession) PlayerSessionResponse {
+	resp := PlayerSessionResponse{
+		Player: PlayerSessionPlayerDTO{
+			Nickname:    s.Player.Nickname,
+			Score:       s.Player.Score,
+			Kills:       s.Player.Kills,
+			Deaths:      s.Player.Deaths,
+			IsAlive:     s.Player.IsAlive,
+			KillStreak:  s.Player.KillStreak,
+			WeaponLevel: s.Player.WeaponLevel,
+			ShotsFired:  s.Player.ShotsFired,
+		},
+		Game: PlayerSessionGameDTO{
+			Code:   s.Game.Code,
+			Status: string(s.Game.Status),
+			Settings: GameSettingsDTO{
+				RespawnDelay:    s.Game.Settings.RespawnDelay,
+				GameDuration:    s.Game.Settings.GameDuration,
+				FriendlyFire:    s.Game.Settings.FriendlyFire,
+				MaxPlayers:      s.Game.Settings.MaxPlayers,
+				ScorePerKill:    s.Game.Settings.ScorePerKill,
+				KillsPerUpgrade: s.Game.Settings.KillsPerUpgrade,
+			},
+		},
+		RemainingTime: s.RemainingTime,
+	}
+	if s.Team != nil {
+		resp.Team = &PlayerSessionTeamDTO{
+			Name:  s.Team.Name,
+			Color: s.Team.Color,
+		}
+	}
+	return resp
 }
 
 func toEventResponse(e domain.GameEvent) EventResponse {

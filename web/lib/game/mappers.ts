@@ -16,6 +16,7 @@ export function toPlayer(p: PlayerResponse, teams: TeamResponse[]): Player {
     killStreak: p.kill_streak ?? 0,
     weaponLevel: p.weapon_level ?? 0,
     shotsFired: p.shots_fired ?? 0,
+    sessionCode: p.session_code,
   };
 }
 

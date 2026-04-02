@@ -25,6 +25,7 @@ export interface Player {
   killStreak: number;
   weaponLevel: number;
   shotsFired: number;
+  sessionCode?: string;
 }
 
 export interface Team {

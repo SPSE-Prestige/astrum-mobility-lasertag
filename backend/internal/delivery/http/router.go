@@ -57,6 +57,9 @@ func NewRouter(
 	// WebSocket (public)
 	mux.HandleFunc("GET /ws", wsHub.HandleWS)
 
+	// Player session lookup (public — for mobile app)
+	mux.HandleFunc("GET /api/player/session/{code}", gameHandler.GetPlayerSession)
+
 	// Protected routes
 	auth := AuthMiddleware(authUC)
 

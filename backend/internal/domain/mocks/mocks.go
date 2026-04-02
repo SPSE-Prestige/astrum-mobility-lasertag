@@ -160,6 +160,7 @@ type MockPlayerRepository struct {
 	AddKillScoreFn                func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
 	RespawnFn                     func(ctx context.Context, playerID string) error
 	IncrementShotsFiredFn         func(ctx context.Context, playerID string) error
+	GetBySessionCodeFn            func(ctx context.Context, code string) (*domain.Player, error)
 }
 
 func (m *MockPlayerRepository) Create(ctx context.Context, p *domain.Player) error {
@@ -214,6 +215,13 @@ func (m *MockPlayerRepository) IncrementShotsFired(ctx context.Context, playerID
 		return m.IncrementShotsFiredFn(ctx, playerID)
 	}
 	return nil
+}
+
+func (m *MockPlayerRepository) GetBySessionCode(ctx context.Context, code string) (*domain.Player, error) {
+	if m.GetBySessionCodeFn != nil {
+		return m.GetBySessionCodeFn(ctx, code)
+	}
+	return nil, domain.ErrNotFound
 }
 
 // ── EventRepository ──
@@ -374,6 +382,7 @@ type MockGameUseCasePort struct {
 	UpdatePlayerTeamFn func(ctx context.Context, playerID string, teamID *string) error
 	ShouldAutoEndFn   func(ctx context.Context, gameID string) (bool, error)
 	RemainingTimeFn   func(game *domain.Game) int
+	GetPlayerSessionFn func(ctx context.Context, code string) (*domain.PlayerSession, error)
 }
 
 func (m *MockGameUseCasePort) CreateGame(ctx context.Context, settings *domain.GameSettings) (*domain.Game, error) {
@@ -446,6 +455,13 @@ func (m *MockGameUseCasePort) ShouldAutoEnd(ctx context.Context, gameID string) 
 
 func (m *MockGameUseCasePort) RemainingTime(game *domain.Game) int {
 	return m.RemainingTimeFn(game)
+}
+
+func (m *MockGameUseCasePort) GetPlayerSession(ctx context.Context, code string) (*domain.PlayerSession, error) {
+	if m.GetPlayerSessionFn != nil {
+		return m.GetPlayerSessionFn(ctx, code)
+	}
+	return nil, domain.ErrNotFound
 }
 
 // ── HitUseCasePort ──

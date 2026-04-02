@@ -85,6 +85,7 @@ type PlayerResponse struct {
 	KillStreak  int     `json:"kill_streak"`
 	WeaponLevel int     `json:"weapon_level"`
 	ShotsFired  int     `json:"shots_fired"`
+	SessionCode string  `json:"session_code,omitempty"`
 }
 
 type GameFullResponse struct {
@@ -120,4 +121,34 @@ type HealthCheck struct {
 	Status    string `json:"status"`
 	LatencyMs int64  `json:"latency_ms,omitempty"`
 	Error     string `json:"error,omitempty"`
+}
+
+// PlayerSessionResponse is the public response for mobile app session lookup.
+type PlayerSessionResponse struct {
+	Player        PlayerSessionPlayerDTO `json:"player"`
+	Game          PlayerSessionGameDTO   `json:"game"`
+	Team          *PlayerSessionTeamDTO  `json:"team"`
+	RemainingTime int                    `json:"remaining_time"`
+}
+
+type PlayerSessionPlayerDTO struct {
+	Nickname    string `json:"nickname"`
+	Score       int    `json:"score"`
+	Kills       int    `json:"kills"`
+	Deaths      int    `json:"deaths"`
+	IsAlive     bool   `json:"is_alive"`
+	KillStreak  int    `json:"kill_streak"`
+	WeaponLevel int    `json:"weapon_level"`
+	ShotsFired  int    `json:"shots_fired"`
+}
+
+type PlayerSessionGameDTO struct {
+	Code     string          `json:"code"`
+	Status   string          `json:"status"`
+	Settings GameSettingsDTO `json:"settings"`
+}
+
+type PlayerSessionTeamDTO struct {
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }

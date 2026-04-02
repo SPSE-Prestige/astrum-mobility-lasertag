@@ -467,3 +467,20 @@ func (h *GameHandler) Events(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, mapSlice(events, toEventResponse))
 }
+
+// GetPlayerSession returns a player's game session by their PIN code.
+// This is a PUBLIC endpoint (no auth required) for the mobile app.
+func (h *GameHandler) GetPlayerSession(w http.ResponseWriter, r *http.Request) {
+	code := r.PathValue("code")
+	if code == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_CODE", "session code is required")
+		return
+	}
+
+	session, err := h.gameUC.GetPlayerSession(r.Context(), code)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toPlayerSessionResponse(session))
+}

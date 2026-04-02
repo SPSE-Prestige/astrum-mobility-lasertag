@@ -51,6 +51,7 @@ export interface PlayerResponse {
   kill_streak: number;
   weapon_level: number;
   shots_fired: number;
+  session_code?: string;
 }
 
 export interface GameFullResponse {

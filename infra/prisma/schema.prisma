@@ -103,6 +103,7 @@ model Player {
   killStreak  Int     @default(0) @map("kill_streak")
   weaponLevel Int     @default(0) @map("weapon_level")
   shotsFired  Int     @default(0) @map("shots_fired")
+  sessionCode String? @map("session_code") @db.VarChar(6)
 
   game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
   team   Team?  @relation(fields: [teamId], references: [id])

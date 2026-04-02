@@ -65,6 +65,8 @@ type PlayerRepository interface {
 	Respawn(ctx context.Context, playerID string) error
 	// IncrementShotsFired atomically increments the shots_fired counter.
 	IncrementShotsFired(ctx context.Context, playerID string) error
+	// GetBySessionCode finds a player by their unique session PIN code.
+	GetBySessionCode(ctx context.Context, code string) (*Player, error)
 }
 
 type EventRepository interface {
@@ -129,6 +131,8 @@ type GameUseCasePort interface {
 	UpdatePlayerTeam(ctx context.Context, playerID string, teamID *string) error
 	ShouldAutoEnd(ctx context.Context, gameID string) (bool, error)
 	RemainingTime(game *Game) int
+	// GetPlayerSession returns a player's game session by their session PIN code.
+	GetPlayerSession(ctx context.Context, code string) (*PlayerSession, error)
 }
 
 // HitUseCasePort defines hit processing operations.
