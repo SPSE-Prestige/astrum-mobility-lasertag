@@ -63,6 +63,8 @@ type PlayerRepository interface {
 	AddKillScore(ctx context.Context, playerID string, score, killsPerUpgrade int) (*KillScoreResult, error)
 	// Respawn atomically sets is_alive=true.
 	Respawn(ctx context.Context, playerID string) error
+	// IncrementShotsFired atomically increments the shots_fired counter.
+	IncrementShotsFired(ctx context.Context, playerID string) error
 }
 
 type EventRepository interface {
@@ -133,6 +135,8 @@ type GameUseCasePort interface {
 type HitUseCasePort interface {
 	ProcessHit(ctx context.Context, gameID, attackerDeviceID, victimDeviceID string) (*HitResult, error)
 	Respawn(ctx context.Context, gameID, deviceID string) error
+	// RecordShot increments the shots_fired counter for a device in a running game.
+	RecordShot(ctx context.Context, gameID, deviceID string) error
 }
 
 // ── Infrastructure port interfaces ──

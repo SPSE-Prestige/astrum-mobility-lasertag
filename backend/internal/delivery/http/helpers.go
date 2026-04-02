@@ -90,6 +90,7 @@ func toPlayerResponse(p domain.Player) PlayerResponse {
 		IsAlive:     p.IsAlive,
 		KillStreak:  p.KillStreak,
 		WeaponLevel: p.WeaponLevel,
+		ShotsFired:  p.ShotsFired,
 	}
 }
 

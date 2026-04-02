@@ -1,7 +1,12 @@
-import { Zap } from "lucide-react";
+import { Crosshair, Zap } from "lucide-react";
 import type { Player } from "@/types/game";
 import type { GameMode } from "@/types/game";
 import type { Language } from "@/types/i18n";
+
+function formatAccuracy(kills: number, shotsFired: number): string {
+  if (shotsFired === 0) return "—";
+  return `${((kills / shotsFired) * 100).toFixed(1)}%`;
+}
 
 interface LeaderboardProps {
   players: Player[];
@@ -22,6 +27,7 @@ export const Leaderboard = ({ players, gameMode, language }: LeaderboardProps) =
               <th className="px-3 py-2">Kills</th>
               <th className="px-3 py-2">Deaths</th>
               <th className="px-3 py-2">{language === "cs" ? "Skóre" : "Score"}</th>
+              <th className="px-3 py-2"><Crosshair className="inline h-3.5 w-3.5 text-cyan-400" /></th>
               <th className="px-3 py-2"><Zap className="inline h-3.5 w-3.5 text-amber-400" /></th>
             </tr>
           </thead>
@@ -33,6 +39,7 @@ export const Leaderboard = ({ players, gameMode, language }: LeaderboardProps) =
                 <td className="px-3 py-2 text-[#00ff00]">{player.kills}</td>
                 <td className="px-3 py-2 text-[#ff0000]">{player.deaths}</td>
                 <td className="px-3 py-2 font-semibold">{player.score}</td>
+                <td className="px-3 py-2 text-cyan-400">{formatAccuracy(player.kills, player.shotsFired)}</td>
                 <td className="px-3 py-2 text-amber-400">{player.weaponLevel > 0 ? `LVL ${player.weaponLevel}` : "—"}</td>
               </tr>
             ))}

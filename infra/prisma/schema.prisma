@@ -102,6 +102,7 @@ model Player {
   isAlive     Boolean @default(true) @map("is_alive")
   killStreak  Int     @default(0) @map("kill_streak")
   weaponLevel Int     @default(0) @map("weapon_level")
+  shotsFired  Int     @default(0) @map("shots_fired")
 
   game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
   team   Team?  @relation(fields: [teamId], references: [id])

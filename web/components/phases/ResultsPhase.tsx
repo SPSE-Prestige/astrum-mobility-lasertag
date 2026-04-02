@@ -49,6 +49,12 @@ export function ResultsPhase({ teamResults, leaderboard, matchHistory, gameMode,
               <p>
                 Deaths: <span className="text-[#ff0000]">{r.deaths}</span>
               </p>
+              <p>
+                {language === "cs" ? "Přesnost" : "Accuracy"}:{" "}
+                <span className="text-cyan-400">
+                  {r.shotsFired > 0 ? `${((r.kills / r.shotsFired) * 100).toFixed(1)}%` : "—"}
+                </span>
+              </p>
             </div>
           </article>
         ))}

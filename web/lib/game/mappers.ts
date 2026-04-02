@@ -15,6 +15,7 @@ export function toPlayer(p: PlayerResponse, teams: TeamResponse[]): Player {
     score: p.score,
     killStreak: p.kill_streak ?? 0,
     weaponLevel: p.weapon_level ?? 0,
+    shotsFired: p.shots_fired ?? 0,
   };
 }
 
@@ -55,16 +56,17 @@ export function buildKillFeed(events: EventResponse[]): KillFeedEvent[] {
 export function calcTeamResults(players: Player[], mode: GameMode): TeamResult[] {
   if (mode === "ffa") {
     return players
-      .map((p) => ({ team: p.name, score: p.score, kills: p.kills, deaths: p.deaths }))
+      .map((p) => ({ team: p.name, score: p.score, kills: p.kills, deaths: p.deaths, shotsFired: p.shotsFired }))
       .sort((a, b) => b.score - a.score);
   }
   const grouped = players
     .filter((p) => p.team !== "Unassigned")
-    .reduce<Record<string, { score: number; kills: number; deaths: number }>>((acc, p) => {
-      if (!acc[p.team]) acc[p.team] = { score: 0, kills: 0, deaths: 0 };
+    .reduce<Record<string, { score: number; kills: number; deaths: number; shotsFired: number }>>((acc, p) => {
+      if (!acc[p.team]) acc[p.team] = { score: 0, kills: 0, deaths: 0, shotsFired: 0 };
       acc[p.team].score += p.score;
       acc[p.team].kills += p.kills;
       acc[p.team].deaths += p.deaths;
+      acc[p.team].shotsFired += p.shotsFired;
       return acc;
     }, {});
   return Object.entries(grouped)

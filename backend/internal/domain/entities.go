@@ -124,6 +124,7 @@ type Player struct {
 	IsAlive     bool
 	KillStreak  int // consecutive kills without dying (resets on death)
 	WeaponLevel int // current weapon tier (resets on death)
+	ShotsFired  int // total shots fired this game (never resets)
 }
 
 type GameEvent struct {

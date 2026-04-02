@@ -159,6 +159,7 @@ type MockPlayerRepository struct {
 	KillPlayerFn                  func(ctx context.Context, playerID string) (bool, error)
 	AddKillScoreFn                func(ctx context.Context, playerID string, score, killsPerUpgrade int) (*domain.KillScoreResult, error)
 	RespawnFn                     func(ctx context.Context, playerID string) error
+	IncrementShotsFiredFn         func(ctx context.Context, playerID string) error
 }
 
 func (m *MockPlayerRepository) Create(ctx context.Context, p *domain.Player) error {
@@ -206,6 +207,13 @@ func (m *MockPlayerRepository) AddKillScore(ctx context.Context, playerID string
 
 func (m *MockPlayerRepository) Respawn(ctx context.Context, playerID string) error {
 	return m.RespawnFn(ctx, playerID)
+}
+
+func (m *MockPlayerRepository) IncrementShotsFired(ctx context.Context, playerID string) error {
+	if m.IncrementShotsFiredFn != nil {
+		return m.IncrementShotsFiredFn(ctx, playerID)
+	}
+	return nil
 }
 
 // ── EventRepository ──
@@ -445,6 +453,7 @@ func (m *MockGameUseCasePort) RemainingTime(game *domain.Game) int {
 type MockHitUseCasePort struct {
 	ProcessHitFn func(ctx context.Context, gameID, attackerDeviceID, victimDeviceID string) (*domain.HitResult, error)
 	RespawnFn    func(ctx context.Context, gameID, deviceID string) error
+	RecordShotFn func(ctx context.Context, gameID, deviceID string) error
 }
 
 func (m *MockHitUseCasePort) ProcessHit(ctx context.Context, gameID, attackerDeviceID, victimDeviceID string) (*domain.HitResult, error) {
@@ -453,4 +462,11 @@ func (m *MockHitUseCasePort) ProcessHit(ctx context.Context, gameID, attackerDev
 
 func (m *MockHitUseCasePort) Respawn(ctx context.Context, gameID, deviceID string) error {
 	return m.RespawnFn(ctx, gameID, deviceID)
+}
+
+func (m *MockHitUseCasePort) RecordShot(ctx context.Context, gameID, deviceID string) error {
+	if m.RecordShotFn != nil {
+		return m.RecordShotFn(ctx, gameID, deviceID)
+	}
+	return nil
 }

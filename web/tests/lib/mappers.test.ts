@@ -21,6 +21,7 @@ const rawPlayer = (overrides: Partial<PlayerResponse> = {}): PlayerResponse => (
   score: 500,
   kill_streak: 3,
   weapon_level: 1,
+  shots_fired: 10,
   ...overrides,
 });
 
@@ -41,6 +42,7 @@ describe("toPlayer", () => {
       score: 500,
       killStreak: 3,
       weaponLevel: 1,
+      shotsFired: 10,
     });
   });
 
@@ -137,6 +139,7 @@ describe("calcTeamResults", () => {
     score,
     killStreak: 0,
     weaponLevel: 0,
+    shotsFired: 0,
   });
 
   it("aggregates team scores in team mode", () => {

@@ -158,3 +158,25 @@ func (uc *HitUseCase) Respawn(ctx context.Context, gameID, deviceID string) erro
 
 	return nil
 }
+
+// RecordShot increments the shots_fired counter for a device in a running game.
+func (uc *HitUseCase) RecordShot(ctx context.Context, gameID, deviceID string) error {
+	game, err := uc.games.GetByID(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("get game for shot: %w", err)
+	}
+	if game.Status != domain.GameRunning {
+		return domain.ErrInvalidGameState
+	}
+
+	player, err := uc.players.GetByGameAndDevice(ctx, gameID, deviceID)
+	if err != nil {
+		return fmt.Errorf("get player for shot: %w", err)
+	}
+
+	if err := uc.players.IncrementShotsFired(ctx, player.ID); err != nil {
+		return fmt.Errorf("increment shots fired: %w", err)
+	}
+
+	return nil
+}

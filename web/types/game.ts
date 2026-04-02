@@ -24,6 +24,7 @@ export interface Player {
   score: number;
   killStreak: number;
   weaponLevel: number;
+  shotsFired: number;
 }
 
 export interface Team {
@@ -50,6 +51,7 @@ export interface TeamResult {
   score: number;
   kills: number;
   deaths: number;
+  shotsFired: number;
 }
 
 export interface MatchHistoryItem {

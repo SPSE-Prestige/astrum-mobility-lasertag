@@ -50,6 +50,7 @@ export interface PlayerResponse {
   is_alive: boolean;
   kill_streak: number;
   weapon_level: number;
+  shots_fired: number;
 }
 
 export interface GameFullResponse {

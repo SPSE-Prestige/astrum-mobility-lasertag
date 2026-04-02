@@ -172,13 +172,44 @@ type hitEvent struct {
 	VictimID string `json:"victim_id"`
 }
 
+// deviceEvent is the generic envelope for all device event payloads.
+type deviceEvent struct {
+	Action   string `json:"action"`
+	GameID   string `json:"game_id"`
+	VictimID string `json:"victim_id"`
+}
+
 func (c *Client) handleEvent(ctx context.Context, attackerDeviceID string, payload []byte) {
-	var evt hitEvent
+	var evt deviceEvent
 	if err := json.Unmarshal(payload, &evt); err != nil {
 		slog.Error("mqtt invalid event payload", "device_id", attackerDeviceID, "error", err)
 		return
 	}
 
+	switch evt.Action {
+	case "weapon_shoot":
+		c.handleShot(ctx, attackerDeviceID, &evt)
+	default:
+		// Legacy hit event (game_id + victim_id, no action field)
+		c.handleHit(ctx, attackerDeviceID, &evt)
+	}
+}
+
+func (c *Client) handleShot(ctx context.Context, deviceID string, evt *deviceEvent) {
+	if evt.GameID == "" {
+		slog.Warn("mqtt shot event missing game_id", "device_id", deviceID)
+		return
+	}
+
+	if err := c.hitUC.RecordShot(ctx, evt.GameID, deviceID); err != nil {
+		slog.Warn("mqtt shot rejected", "device_id", deviceID, "error", err)
+		return
+	}
+
+	slog.Debug("mqtt shot recorded", "device_id", deviceID, "game_id", evt.GameID)
+}
+
+func (c *Client) handleHit(ctx context.Context, attackerDeviceID string, evt *deviceEvent) {
 	if evt.GameID == "" || evt.VictimID == "" {
 		slog.Warn("mqtt event missing required fields", "device_id", attackerDeviceID)
 		return

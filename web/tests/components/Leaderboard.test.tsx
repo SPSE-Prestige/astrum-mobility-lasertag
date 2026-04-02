@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { Leaderboard } from "@/components/race-control/Leaderboard";
 import type { Player } from "@/types/game";
 
-const mockPlayer = (name: string, kills: number, deaths: number, score: number, weaponLevel = 0): Player => ({
+const mockPlayer = (name: string, kills: number, deaths: number, score: number, weaponLevel = 0, shotsFired = 0): Player => ({
   id: name.toLowerCase(),
   name,
   team: "Alpha",
@@ -15,6 +15,7 @@ const mockPlayer = (name: string, kills: number, deaths: number, score: number, 
   score,
   killStreak: 0,
   weaponLevel,
+  shotsFired,
 });
 
 describe("Leaderboard", () => {
@@ -34,7 +35,8 @@ describe("Leaderboard", () => {
   it("shows dash when weapon level is 0", () => {
     const players = [mockPlayer("Alice", 5, 2, 500, 0)];
     render(<Leaderboard players={players} gameMode="team" language="en" />);
-    expect(screen.getByText("—")).toBeInTheDocument();
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows Solo in ffa mode", () => {
@@ -51,5 +53,18 @@ describe("Leaderboard", () => {
   it("renders English header", () => {
     render(<Leaderboard players={[]} gameMode="team" language="en" />);
     expect(screen.getByText("Live Leaderboard")).toBeInTheDocument();
+  });
+
+  it("shows accuracy percentage when shots fired > 0", () => {
+    const players = [mockPlayer("Alice", 5, 2, 500, 0, 20)];
+    render(<Leaderboard players={players} gameMode="team" language="en" />);
+    expect(screen.getByText("25.0%")).toBeInTheDocument();
+  });
+
+  it("shows dash for accuracy when no shots fired", () => {
+    const players = [mockPlayer("Alice", 0, 0, 0, 0, 0)];
+    render(<Leaderboard players={players} gameMode="team" language="en" />);
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(2); // accuracy dash + weapon dash
   });
 });

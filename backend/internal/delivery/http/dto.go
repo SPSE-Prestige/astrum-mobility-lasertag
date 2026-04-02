@@ -84,6 +84,7 @@ type PlayerResponse struct {
 	IsAlive     bool    `json:"is_alive"`
 	KillStreak  int     `json:"kill_streak"`
 	WeaponLevel int     `json:"weapon_level"`
+	ShotsFired  int     `json:"shots_fired"`
 }
 
 type GameFullResponse struct {
