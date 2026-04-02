@@ -61,6 +61,8 @@ type PlayerRepository interface {
 	// If killsPerUpgrade > 0 and streak hits the threshold, weapon_level is incremented.
 	// Returns the updated streak state.
 	AddKillScore(ctx context.Context, playerID string, score, killsPerUpgrade int) (*KillScoreResult, error)
+	// SubKillScore atomically decrements kills and score, resets streak (friendly fire penalty).
+	SubKillScore(ctx context.Context, playerID string, score int) error
 	// Respawn atomically sets is_alive=true.
 	Respawn(ctx context.Context, playerID string) error
 	// IncrementShotsFired atomically increments the shots_fired counter.
