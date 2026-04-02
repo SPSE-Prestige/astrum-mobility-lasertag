@@ -29,8 +29,9 @@ export function useWebSocket({ enabled, gameId, onEvent, onStatusChange }: UseWe
       return;
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const wsUrl = apiUrl.replace(/^https?/, (m) => (m === "https" ? "wss" : "ws")) + "/ws";
+    // Always use current page origin for WS (goes through nginx proxy)
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${proto}//${window.location.host}/ws`;
 
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
