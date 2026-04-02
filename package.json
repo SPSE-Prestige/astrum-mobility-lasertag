@@ -5,5 +5,8 @@
   "scripts": {
     "mobile": "cd mobile && expo start",
     "mobile:build": "cd mobile && expo build"
+  },
+  "dependencies": {
+    "expo": "^55.0.9"
   }
 }
