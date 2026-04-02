@@ -14,6 +14,7 @@ export interface GameConfig {
 
 export interface Player {
   id: string;
+  loginCode?: string; // Unique admin-assigned code for mobile login
   name: string;
   team: string;
   teamId: string | null;
