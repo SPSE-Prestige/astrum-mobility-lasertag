@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -40,8 +41,7 @@ func (r *PlayerRepo) GetByGameAndDevice(ctx context.Context, gameID, deviceID st
 func (r *PlayerRepo) FindActivePlayerByDevice(ctx context.Context, deviceID string) (*domain.Player, *domain.Game, error) {
 	row := getExecutor(ctx, r.db).QueryRowContext(ctx,
 		`SELECT p.id, p.game_id, p.team_id, p.device_id, p.nickname, p.score, p.kills, p.deaths, p.is_alive, p.kill_streak, p.weapon_level,
-		        g.id, g.code, g.status, g.respawn_delay, g.game_duration, g.friendly_fire, g.max_players, g.score_per_kill, g.kills_per_upgrade,
-		        g.created_at, g.started_at, g.ended_at
+		        g.id, g.code, g.status, g.settings, g.created_at, g.started_at, g.ended_at
 		 FROM players p
 		 JOIN games g ON p.game_id = g.id
 		 WHERE p.device_id = $1 AND g.status = $2
@@ -52,11 +52,11 @@ func (r *PlayerRepo) FindActivePlayerByDevice(ctx context.Context, deviceID stri
 	g := &domain.Game{}
 	var teamID sql.NullString
 	var startedAt, endedAt sql.NullTime
+	var settingsJSON []byte
 
 	err := row.Scan(
 		&p.ID, &p.GameID, &teamID, &p.DeviceID, &p.Nickname, &p.Score, &p.Kills, &p.Deaths, &p.IsAlive, &p.KillStreak, &p.WeaponLevel,
-		&g.ID, &g.Code, &g.Status, &g.Settings.RespawnDelay, &g.Settings.GameDuration, &g.Settings.FriendlyFire, &g.Settings.MaxPlayers, &g.Settings.ScorePerKill, &g.Settings.KillsPerUpgrade,
-		&g.CreatedAt, &startedAt, &endedAt,
+		&g.ID, &g.Code, &g.Status, &settingsJSON, &g.CreatedAt, &startedAt, &endedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, nil // not in any active game
@@ -65,6 +65,7 @@ func (r *PlayerRepo) FindActivePlayerByDevice(ctx context.Context, deviceID stri
 		return nil, nil, fmt.Errorf("find active player by device %s: %w", deviceID, err)
 	}
 
+	_ = json.Unmarshal(settingsJSON, &g.Settings)
 	if teamID.Valid {
 		p.TeamID = &teamID.String
 	}
