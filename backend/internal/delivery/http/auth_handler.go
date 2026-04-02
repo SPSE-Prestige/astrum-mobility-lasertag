@@ -1,16 +1,17 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
 
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
+	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
 )
 
 type AuthHandler struct {
-	authUC *usecase.AuthUseCase
+	authUC domain.AuthUseCasePort
 }
 
-func NewAuthHandler(authUC *usecase.AuthUseCase) *AuthHandler {
+func NewAuthHandler(authUC domain.AuthUseCasePort) *AuthHandler {
 	return &AuthHandler{authUC: authUC}
 }
 
@@ -28,17 +29,17 @@ func NewAuthHandler(authUC *usecase.AuthUseCase) *AuthHandler {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
 		return
 	}
 	if req.Username == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "username and password required")
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "username and password required")
 		return
 	}
 
 	session, err := h.authUC.Login(r.Context(), req.Username, req.Password)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid credentials")
 		return
 	}
 
@@ -61,6 +62,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if len(token) > 7 {
 		token = token[7:] // strip "Bearer "
 	}
-	_ = h.authUC.Logout(r.Context(), token)
+	if err := h.authUC.Logout(r.Context(), token); err != nil {
+		slog.Error("logout failed", "error", err)
+	}
 	w.WriteHeader(http.StatusNoContent)
 }

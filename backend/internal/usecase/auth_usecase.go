@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
@@ -12,12 +13,13 @@ import (
 )
 
 type AuthUseCase struct {
-	users    domain.UserRepository
-	sessions domain.SessionRepository
+	users      domain.UserRepository
+	sessions   domain.SessionRepository
+	sessionTTL time.Duration
 }
 
-func NewAuthUseCase(users domain.UserRepository, sessions domain.SessionRepository) *AuthUseCase {
-	return &AuthUseCase{users: users, sessions: sessions}
+func NewAuthUseCase(users domain.UserRepository, sessions domain.SessionRepository, sessionTTL time.Duration) *AuthUseCase {
+	return &AuthUseCase{users: users, sessions: sessions, sessionTTL: sessionTTL}
 }
 
 func (uc *AuthUseCase) Login(ctx context.Context, username, password string) (*domain.Session, error) {
@@ -32,19 +34,19 @@ func (uc *AuthUseCase) Login(ctx context.Context, username, password string) (*d
 
 	token, err := generateToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate token: %w", err)
 	}
 
 	session := &domain.Session{
 		ID:        uuid.New().String(),
 		UserID:    user.ID,
 		Token:     token,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(uc.sessionTTL),
 		CreatedAt: time.Now(),
 	}
 
 	if err := uc.sessions.Create(ctx, session); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create session: %w", err)
 	}
 
 	return session, nil
@@ -61,11 +63,19 @@ func (uc *AuthUseCase) ValidateToken(ctx context.Context, token string) (*domain
 		return nil, domain.ErrSessionExpired
 	}
 
-	return uc.users.GetByID(ctx, session.UserID)
+	user, err := uc.users.GetByID(ctx, session.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("get user for session: %w", err)
+	}
+	return user, nil
 }
 
 func (uc *AuthUseCase) Logout(ctx context.Context, token string) error {
 	return uc.sessions.DeleteByToken(ctx, token)
+}
+
+func (uc *AuthUseCase) CleanupExpiredSessions(ctx context.Context) error {
+	return uc.sessions.DeleteExpired(ctx)
 }
 
 func generateToken() (string, error) {

@@ -2,6 +2,9 @@ package usecase
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log/slog"
 	"math/rand"
 	"time"
 
@@ -15,6 +18,7 @@ type GameUseCase struct {
 	players domain.PlayerRepository
 	devices domain.DeviceRepository
 	events  domain.EventRepository
+	txMgr   domain.TxManager
 }
 
 func NewGameUseCase(
@@ -23,6 +27,7 @@ func NewGameUseCase(
 	players domain.PlayerRepository,
 	devices domain.DeviceRepository,
 	events domain.EventRepository,
+	txMgr domain.TxManager,
 ) *GameUseCase {
 	return &GameUseCase{
 		games:   games,
@@ -30,42 +35,63 @@ func NewGameUseCase(
 		players: players,
 		devices: devices,
 		events:  events,
+		txMgr:   txMgr,
 	}
 }
 
-// CreateGame creates a new game in lobby state.
+const maxGameCodeRetries = 5
+
+// CreateGame creates a new game in lobby state with unique game code.
 func (uc *GameUseCase) CreateGame(ctx context.Context, settings *domain.GameSettings) (*domain.Game, error) {
 	if settings == nil {
 		s := domain.DefaultGameSettings()
 		settings = &s
 	}
 
-	game := &domain.Game{
-		ID:        uuid.New().String(),
-		Code:      generateGameCode(),
-		Status:    domain.GameLobby,
-		Settings:  *settings,
-		CreatedAt: time.Now(),
+	if err := settings.Validate(); err != nil {
+		return nil, fmt.Errorf("validate settings: %w", err)
 	}
-	if err := uc.games.Create(ctx, game); err != nil {
-		return nil, err
+
+	// Retry loop for unique game code
+	for attempt := 0; attempt < maxGameCodeRetries; attempt++ {
+		game := &domain.Game{
+			ID:        uuid.New().String(),
+			Code:      generateGameCode(),
+			Status:    domain.GameLobby,
+			Settings:  *settings,
+			CreatedAt: time.Now(),
+		}
+		err := uc.games.Create(ctx, game)
+		if err == nil {
+			return game, nil
+		}
+		// If it's a unique constraint violation, retry with new code
+		if attempt < maxGameCodeRetries-1 {
+			slog.Warn("game code collision, retrying", "code", game.Code, "attempt", attempt+1)
+			continue
+		}
+		return nil, fmt.Errorf("create game after %d attempts: %w", maxGameCodeRetries, err)
 	}
-	return game, nil
+	return nil, fmt.Errorf("create game: exhausted retries")
 }
 
 func (uc *GameUseCase) GetGame(ctx context.Context, id string) (*domain.Game, error) {
-	return uc.games.GetByID(ctx, id)
+	game, err := uc.games.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get game %s: %w", id, err)
+	}
+	return game, nil
 }
 
 func (uc *GameUseCase) ListGames(ctx context.Context) ([]domain.Game, error) {
 	return uc.games.ListAll(ctx)
 }
 
-// AddTeam adds a team to a game.
+// AddTeam adds a team to a game (lobby only).
 func (uc *GameUseCase) AddTeam(ctx context.Context, gameID, name, color string) (*domain.Team, error) {
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get game for add team: %w", err)
 	}
 	if game.Status != domain.GameLobby {
 		return nil, domain.ErrInvalidGameState
@@ -78,7 +104,7 @@ func (uc *GameUseCase) AddTeam(ctx context.Context, gameID, name, color string) 
 		Color:  color,
 	}
 	if err := uc.teams.Create(ctx, team); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create team: %w", err)
 	}
 	return team, nil
 }
@@ -87,7 +113,15 @@ func (uc *GameUseCase) ListTeams(ctx context.Context, gameID string) ([]domain.T
 	return uc.teams.ListByGame(ctx, gameID)
 }
 
-func (uc *GameUseCase) RemoveTeam(ctx context.Context, teamID string) error {
+// RemoveTeam removes a team only if the game is in lobby state.
+func (uc *GameUseCase) RemoveTeam(ctx context.Context, gameID, teamID string) error {
+	game, err := uc.games.GetByID(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("get game for remove team: %w", err)
+	}
+	if game.Status != domain.GameLobby {
+		return domain.ErrInvalidGameState
+	}
 	return uc.teams.Delete(ctx, teamID)
 }
 
@@ -95,25 +129,23 @@ func (uc *GameUseCase) RemoveTeam(ctx context.Context, teamID string) error {
 func (uc *GameUseCase) AddPlayer(ctx context.Context, gameID, deviceID, nickname string, teamID *string) (*domain.Player, error) {
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get game for add player: %w", err)
 	}
 	if game.Status != domain.GameLobby {
 		return nil, domain.ErrInvalidGameState
 	}
 
-	// Check max players
 	players, err := uc.players.ListByGame(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list players for capacity check: %w", err)
 	}
 	if len(players) >= game.Settings.MaxPlayers {
 		return nil, domain.ErrGameFull
 	}
 
-	// Check device exists and is available
 	device, err := uc.devices.GetByDeviceID(ctx, deviceID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get device %s: %w", deviceID, err)
 	}
 	if device.Status == domain.DeviceInGame {
 		return nil, domain.ErrDeviceInGame
@@ -128,84 +160,147 @@ func (uc *GameUseCase) AddPlayer(ctx context.Context, gameID, deviceID, nickname
 		IsAlive:  true,
 	}
 	if err := uc.players.Create(ctx, player); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create player: %w", err)
 	}
 	return player, nil
 }
 
-func (uc *GameUseCase) RemovePlayer(ctx context.Context, playerID string) error {
-	return uc.players.Delete(ctx, playerID)
+// RemovePlayer removes a player and releases their device back to online.
+func (uc *GameUseCase) RemovePlayer(ctx context.Context, gameID, playerID string) error {
+	game, err := uc.games.GetByID(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("get game for remove player: %w", err)
+	}
+	if game.Status != domain.GameLobby {
+		return domain.ErrInvalidGameState
+	}
+
+	player, err := uc.players.GetByID(ctx, playerID)
+	if err != nil {
+		return fmt.Errorf("get player %s: %w", playerID, err)
+	}
+
+	if err := uc.players.Delete(ctx, playerID); err != nil {
+		return fmt.Errorf("delete player %s: %w", playerID, err)
+	}
+
+	// Release device back to online
+	if err := uc.devices.UpdateStatus(ctx, player.DeviceID, domain.DeviceOnline); err != nil {
+		slog.Error("failed to release device after player removal",
+			"device_id", player.DeviceID, "player_id", playerID, "error", err)
+	}
+	return nil
 }
 
 func (uc *GameUseCase) ListPlayers(ctx context.Context, gameID string) ([]domain.Player, error) {
 	return uc.players.ListByGame(ctx, gameID)
 }
 
-// StartGame transitions game from lobby to running.
-func (uc *GameUseCase) StartGame(ctx context.Context, gameID string) (*domain.Game, error) {
-	game, err := uc.games.GetByID(ctx, gameID)
+// StartGame transitions game from lobby to running within a transaction.
+// Returns the game and a list of device IDs for MQTT notification.
+func (uc *GameUseCase) StartGame(ctx context.Context, gameID string) (*domain.Game, []string, error) {
+	var result *domain.Game
+	var deviceIDs []string
+
+	err := uc.txMgr.WithTx(ctx, func(txCtx context.Context) error {
+		game, err := uc.games.GetByID(txCtx, gameID)
+		if err != nil {
+			return fmt.Errorf("get game: %w", err)
+		}
+		if game.Status != domain.GameLobby {
+			return domain.ErrInvalidGameState
+		}
+
+		now := time.Now()
+		game.Status = domain.GameRunning
+		game.StartedAt = &now
+
+		if err := uc.games.Update(txCtx, game); err != nil {
+			return fmt.Errorf("update game status: %w", err)
+		}
+
+		players, err := uc.players.ListByGame(txCtx, gameID)
+		if err != nil {
+			return fmt.Errorf("list players: %w", err)
+		}
+
+		for _, p := range players {
+			if err := uc.devices.UpdateStatus(txCtx, p.DeviceID, domain.DeviceInGame); err != nil {
+				return fmt.Errorf("mark device %s in-game: %w", p.DeviceID, err)
+			}
+			deviceIDs = append(deviceIDs, p.DeviceID)
+		}
+
+		result = game
+		return nil
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if game.Status != domain.GameLobby {
-		return nil, domain.ErrInvalidGameState
-	}
-
-	now := time.Now()
-	game.Status = domain.GameRunning
-	game.StartedAt = &now
-
-	if err := uc.games.Update(ctx, game); err != nil {
-		return nil, err
-	}
-
-	// Mark all player devices as in_game
-	players, _ := uc.players.ListByGame(ctx, gameID)
-	for _, p := range players {
-		_ = uc.devices.UpdateStatus(ctx, p.DeviceID, domain.DeviceInGame)
-	}
-
-	return game, nil
+	return result, deviceIDs, nil
 }
 
-// EndGame transitions game from running to finished.
-func (uc *GameUseCase) EndGame(ctx context.Context, gameID string) (*domain.Game, error) {
-	game, err := uc.games.GetByID(ctx, gameID)
+// EndGame transitions game from running to finished within a transaction.
+// Returns the game and device IDs for MQTT notification.
+func (uc *GameUseCase) EndGame(ctx context.Context, gameID string) (*domain.Game, []string, error) {
+	var result *domain.Game
+	var deviceIDs []string
+
+	err := uc.txMgr.WithTx(ctx, func(txCtx context.Context) error {
+		game, err := uc.games.GetByID(txCtx, gameID)
+		if err != nil {
+			return fmt.Errorf("get game: %w", err)
+		}
+		if game.Status != domain.GameRunning {
+			return domain.ErrInvalidGameState
+		}
+
+		now := time.Now()
+		game.Status = domain.GameFinished
+		game.EndedAt = &now
+
+		if err := uc.games.Update(txCtx, game); err != nil {
+			return fmt.Errorf("update game status: %w", err)
+		}
+
+		players, err := uc.players.ListByGame(txCtx, gameID)
+		if err != nil {
+			return fmt.Errorf("list players: %w", err)
+		}
+
+		for _, p := range players {
+			if err := uc.devices.UpdateStatus(txCtx, p.DeviceID, domain.DeviceOnline); err != nil {
+				return fmt.Errorf("release device %s: %w", p.DeviceID, err)
+			}
+			deviceIDs = append(deviceIDs, p.DeviceID)
+		}
+
+		result = game
+		return nil
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if game.Status != domain.GameRunning {
-		return nil, domain.ErrInvalidGameState
-	}
-
-	now := time.Now()
-	game.Status = domain.GameFinished
-	game.EndedAt = &now
-
-	if err := uc.games.Update(ctx, game); err != nil {
-		return nil, err
-	}
-
-	// Release devices back to online
-	players, _ := uc.players.ListByGame(ctx, gameID)
-	for _, p := range players {
-		_ = uc.devices.UpdateStatus(ctx, p.DeviceID, domain.DeviceOnline)
-	}
-
-	return game, nil
+	return result, deviceIDs, nil
 }
 
 func (uc *GameUseCase) UpdateSettings(ctx context.Context, gameID string, settings domain.GameSettings) (*domain.Game, error) {
+	if err := settings.Validate(); err != nil {
+		return nil, fmt.Errorf("validate settings: %w", err)
+	}
+
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get game for update settings: %w", err)
 	}
 	if game.Status != domain.GameLobby {
 		return nil, domain.ErrInvalidGameState
 	}
 	game.Settings = settings
 	if err := uc.games.Update(ctx, game); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update game settings: %w", err)
 	}
 	return game, nil
 }
@@ -220,32 +315,25 @@ func generateGameCode() string {
 }
 
 // GetGameFull returns a game with its teams, players, and events.
-type GameFull struct {
-	Game    domain.Game
-	Teams   []domain.Team
-	Players []domain.Player
-	Events  []domain.GameEvent
-}
-
-func (uc *GameUseCase) GetGameFull(ctx context.Context, gameID string) (*GameFull, error) {
+func (uc *GameUseCase) GetGameFull(ctx context.Context, gameID string) (*domain.GameFull, error) {
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get game: %w", err)
 	}
 	teams, err := uc.teams.ListByGame(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list teams: %w", err)
 	}
 	players, err := uc.players.ListByGame(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list players: %w", err)
 	}
 	events, err := uc.events.ListByGame(ctx, gameID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	return &GameFull{
+	return &domain.GameFull{
 		Game:    *game,
 		Teams:   teams,
 		Players: players,
@@ -264,11 +352,11 @@ func (uc *GameUseCase) ListEvents(ctx context.Context, gameID string) ([]domain.
 func (uc *GameUseCase) UpdatePlayerTeam(ctx context.Context, playerID string, teamID *string) error {
 	player, err := uc.players.GetByID(ctx, playerID)
 	if err != nil {
-		return err
+		return fmt.Errorf("get player: %w", err)
 	}
 	game, err := uc.games.GetByID(ctx, player.GameID)
 	if err != nil {
-		return err
+		return fmt.Errorf("get game: %w", err)
 	}
 	if game.Status != domain.GameLobby {
 		return domain.ErrInvalidGameState
@@ -281,7 +369,10 @@ func (uc *GameUseCase) UpdatePlayerTeam(ctx context.Context, playerID string, te
 func (uc *GameUseCase) ShouldAutoEnd(ctx context.Context, gameID string) (bool, error) {
 	game, err := uc.games.GetByID(ctx, gameID)
 	if err != nil {
-		return false, err
+		if errors.Is(err, domain.ErrNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get game for auto-end check: %w", err)
 	}
 	if game.Status != domain.GameRunning || game.StartedAt == nil || game.Settings.GameDuration == 0 {
 		return false, nil

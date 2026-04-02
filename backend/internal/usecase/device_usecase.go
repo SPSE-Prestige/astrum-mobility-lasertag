@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
@@ -18,6 +20,10 @@ func NewDeviceUseCase(devices domain.DeviceRepository) *DeviceUseCase {
 
 // Register is called when an ESP32 sends a registration message via MQTT.
 func (uc *DeviceUseCase) Register(ctx context.Context, deviceID string) (*domain.Device, error) {
+	if deviceID == "" {
+		return nil, fmt.Errorf("register device: %w", domain.ErrValidation)
+	}
+
 	d := &domain.Device{
 		ID:       uuid.New().String(),
 		DeviceID: deviceID,
@@ -25,30 +31,40 @@ func (uc *DeviceUseCase) Register(ctx context.Context, deviceID string) (*domain
 		LastSeen: time.Now(),
 	}
 	if err := uc.devices.Upsert(ctx, d); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("upsert device %s: %w", deviceID, err)
 	}
-	return uc.devices.GetByDeviceID(ctx, deviceID)
+
+	result, err := uc.devices.GetByDeviceID(ctx, deviceID)
+	if err != nil {
+		return nil, fmt.Errorf("get device after register %s: %w", deviceID, err)
+	}
+	return result, nil
 }
 
 // Heartbeat updates the last_seen timestamp for a device.
 func (uc *DeviceUseCase) Heartbeat(ctx context.Context, deviceID string) error {
-	return uc.devices.UpdateLastSeen(ctx, deviceID)
+	if err := uc.devices.UpdateLastSeen(ctx, deviceID); err != nil {
+		return fmt.Errorf("heartbeat device %s: %w", deviceID, err)
+	}
+	return nil
 }
 
 // MarkOffline sets devices that haven't sent a heartbeat within the timeout as offline.
 func (uc *DeviceUseCase) MarkOffline(ctx context.Context, timeout time.Duration) ([]string, error) {
 	devices, err := uc.devices.ListByStatus(ctx, domain.DeviceOnline)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list online devices: %w", err)
 	}
 
 	cutoff := time.Now().Add(-timeout)
 	var offlineIDs []string
 	for _, d := range devices {
 		if d.LastSeen.Before(cutoff) {
-			if err := uc.devices.UpdateStatus(ctx, d.DeviceID, domain.DeviceOffline); err == nil {
-				offlineIDs = append(offlineIDs, d.DeviceID)
+			if err := uc.devices.UpdateStatus(ctx, d.DeviceID, domain.DeviceOffline); err != nil {
+				slog.Error("failed to mark device offline", "device_id", d.DeviceID, "error", err)
+				continue
 			}
+			offlineIDs = append(offlineIDs, d.DeviceID)
 		}
 	}
 	return offlineIDs, nil

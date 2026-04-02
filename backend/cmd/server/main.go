@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,90 +27,116 @@ import (
 // @name						Authorization
 // @description				Enter "Bearer {token}" (without quotes).
 func main() {
-	cfg := config.Load()
+	// Structured logging
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
 
 	container, err := di.NewContainer(cfg)
 	if err != nil {
-		log.Fatalf("failed to initialize: %v", err)
+		slog.Error("failed to initialize", "error", err)
+		os.Exit(1)
 	}
 	defer container.DB.Close()
 
 	// Connect MQTT
 	if err := container.MQTTClient.Connect(); err != nil {
-		log.Printf("[WARN] MQTT connection failed: %v (will retry on reconnect)", err)
+		slog.Warn("MQTT connection failed, will retry on reconnect", "error", err)
 	}
 	defer container.MQTTClient.Disconnect()
 
-	// Background: heartbeat timeout checker (mark devices offline after 30s without heartbeat)
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			offlineIDs, err := container.DeviceUC.MarkOffline(ctx, 30*time.Second)
-			cancel()
-			if err != nil {
-				log.Printf("[BG] offline check error: %v", err)
-			}
-			for _, id := range offlineIDs {
-				log.Printf("[BG] device %s marked offline", id)
-			}
+	// Context for background goroutines
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// Background: heartbeat timeout checker
+	go runBackgroundTask(ctx, cfg.HeartbeatCheckInterval, func() {
+		tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		offlineIDs, err := container.DeviceUC.MarkOffline(tctx, cfg.DeviceOfflineTimeout)
+		if err != nil {
+			slog.Error("offline check error", "error", err)
 		}
-	}()
+		for _, id := range offlineIDs {
+			slog.Info("device marked offline", "device_id", id)
+		}
+	})
 
 	// Background: auto-end games that exceeded their duration
-	go func() {
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			games, err := container.GameUC.ListGames(ctx)
-			if err != nil {
-				cancel()
+	go runBackgroundTask(ctx, cfg.AutoEndCheckInterval, func() {
+		tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		games, err := container.GameUC.ListGames(tctx)
+		if err != nil {
+			return
+		}
+		for _, g := range games {
+			if g.Status != domain.GameRunning {
 				continue
 			}
-			for _, g := range games {
-				if g.Status != domain.GameRunning {
-					continue
-				}
-				shouldEnd, _ := container.GameUC.ShouldAutoEnd(ctx, g.ID)
-				if shouldEnd {
-					game, err := container.GameUC.EndGame(ctx, g.ID)
-					if err == nil {
-						log.Printf("[BG] game %s auto-ended (duration expired)", game.Code)
-					}
+			shouldEnd, _ := container.GameUC.ShouldAutoEnd(tctx, g.ID)
+			if shouldEnd {
+				_, _, endErr := container.GameUC.EndGame(tctx, g.ID)
+				if endErr == nil {
+					slog.Info("game auto-ended", "game_code", g.Code, "game_id", g.ID)
 				}
 			}
-			cancel()
 		}
-	}()
+	})
 
-	// HTTP server
+	// Background: session cleanup
+	go runBackgroundTask(ctx, cfg.SessionCleanupInterval, func() {
+		tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if err := container.AuthUC.CleanupExpiredSessions(tctx); err != nil {
+			slog.Error("session cleanup error", "error", err)
+		}
+	})
+
+	// HTTP server with configurable timeouts
 	srv := &http.Server{
 		Addr:         ":" + cfg.ServerPort,
 		Handler:      container.Handler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+		IdleTimeout:  cfg.IdleTimeout,
 	}
 
 	go func() {
-		log.Printf("[HTTP] listening on :%s", cfg.ServerPort)
+		slog.Info("HTTP server starting", "port", cfg.ServerPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("[HTTP] server error: %v", err)
+			slog.Error("HTTP server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	// Wait for shutdown signal
+	<-ctx.Done()
+	slog.Info("shutting down...")
 
-	log.Println("[SHUTDOWN] shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("[SHUTDOWN] server forced to shutdown: %v", err)
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
-	log.Println("[SHUTDOWN] done")
+	slog.Info("shutdown complete")
+}
+
+// runBackgroundTask runs fn on an interval until ctx is cancelled.
+func runBackgroundTask(ctx context.Context, interval time.Duration, fn func()) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			fn()
+		}
+	}
 }

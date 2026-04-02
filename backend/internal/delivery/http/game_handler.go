@@ -2,20 +2,39 @@ package http
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/domain"
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/infrastructure/mqtt"
-	"github.com/SPSE-Prestige/aimtec2026-lasertag/backend/internal/usecase"
 )
 
 type GameHandler struct {
-	gameUC *usecase.GameUseCase
-	mqtt   *mqtt.Client
+	gameUC domain.GameUseCasePort
+	mqtt   domain.MQTTPublisher
 }
 
-func NewGameHandler(gameUC *usecase.GameUseCase, mqttClient *mqtt.Client) *GameHandler {
-	return &GameHandler{gameUC: gameUC, mqtt: mqttClient}
+func NewGameHandler(gameUC domain.GameUseCasePort, mqttPub domain.MQTTPublisher) *GameHandler {
+	return &GameHandler{gameUC: gameUC, mqtt: mqttPub}
+}
+
+// handleDomainError maps domain errors to HTTP status codes.
+// Logs internal errors and never leaks them to the client.
+func handleDomainError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, domain.ErrNotFound):
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
+	case errors.Is(err, domain.ErrInvalidGameState):
+		writeError(w, http.StatusConflict, "INVALID_STATE", "invalid game state for this operation")
+	case errors.Is(err, domain.ErrGameFull):
+		writeError(w, http.StatusConflict, "GAME_FULL", "game has reached maximum players")
+	case errors.Is(err, domain.ErrDeviceInGame):
+		writeError(w, http.StatusConflict, "DEVICE_IN_GAME", "device is already in a game")
+	case errors.Is(err, domain.ErrValidation):
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	default:
+		slog.Error("internal error", "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an internal error occurred")
+	}
 }
 
 // Create godoc
@@ -34,24 +53,26 @@ func NewGameHandler(gameUC *usecase.GameUseCase, mqttClient *mqtt.Client) *GameH
 func (h *GameHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateGameRequest
 	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
 		return
 	}
 
 	var settings *domain.GameSettings
 	if req.Settings != nil {
 		s := domain.GameSettings{
-			RespawnDelay: req.Settings.RespawnDelay,
-			GameDuration: req.Settings.GameDuration,
-			FriendlyFire: req.Settings.FriendlyFire,
-			MaxPlayers:   req.Settings.MaxPlayers,
+			RespawnDelay:    req.Settings.RespawnDelay,
+			GameDuration:    req.Settings.GameDuration,
+			FriendlyFire:    req.Settings.FriendlyFire,
+			MaxPlayers:      req.Settings.MaxPlayers,
+			ScorePerKill:    req.Settings.ScorePerKill,
+			KillsPerUpgrade: req.Settings.KillsPerUpgrade,
 		}
 		settings = &s
 	}
 
 	game, err := h.gameUC.CreateGame(r.Context(), settings)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, toGameResponse(*game))
@@ -72,11 +93,7 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	game, err := h.gameUC.GetGame(r.Context(), gameID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "game not found")
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, toGameResponse(*game))
@@ -97,11 +114,7 @@ func (h *GameHandler) GetFull(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	full, err := h.gameUC.GetGameFull(r.Context(), gameID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "game not found")
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, GameFullResponse{
@@ -125,7 +138,7 @@ func (h *GameHandler) GetFull(w http.ResponseWriter, r *http.Request) {
 func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	games, err := h.gameUC.ListGames(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(games, toGameResponse))
@@ -145,24 +158,13 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 //	@Router		/games/{id}/start [post]
 func (h *GameHandler) Start(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
-	game, err := h.gameUC.StartGame(r.Context(), gameID)
+	game, deviceIDs, err := h.gameUC.StartGame(r.Context(), gameID)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, domain.ErrNotFound) {
-			status = http.StatusNotFound
-		} else if errors.Is(err, domain.ErrInvalidGameState) {
-			status = http.StatusConflict
-		}
-		writeError(w, status, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 
-	// Notify devices via MQTT
-	players, _ := h.gameUC.ListPlayers(r.Context(), gameID)
-	deviceIDs := make([]string, len(players))
-	for i, p := range players {
-		deviceIDs[i] = p.DeviceID
-	}
+	// Notify devices via MQTT (non-blocking)
 	h.mqtt.PublishGameStart(deviceIDs, gameID)
 
 	writeJSON(w, http.StatusOK, toGameResponse(*game))
@@ -182,24 +184,12 @@ func (h *GameHandler) Start(w http.ResponseWriter, r *http.Request) {
 //	@Router		/games/{id}/end [post]
 func (h *GameHandler) End(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
-	game, err := h.gameUC.EndGame(r.Context(), gameID)
+	game, deviceIDs, err := h.gameUC.EndGame(r.Context(), gameID)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, domain.ErrNotFound) {
-			status = http.StatusNotFound
-		} else if errors.Is(err, domain.ErrInvalidGameState) {
-			status = http.StatusConflict
-		}
-		writeError(w, status, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 
-	// Notify devices via MQTT
-	players, _ := h.gameUC.ListPlayers(r.Context(), gameID)
-	deviceIDs := make([]string, len(players))
-	for i, p := range players {
-		deviceIDs[i] = p.DeviceID
-	}
 	h.mqtt.PublishGameEnd(deviceIDs)
 
 	writeJSON(w, http.StatusOK, toGameResponse(*game))
@@ -224,26 +214,22 @@ func (h *GameHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	var req UpdateSettingsRequest
 	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
 		return
 	}
 
 	settings := domain.GameSettings{
-		RespawnDelay: req.Settings.RespawnDelay,
-		GameDuration: req.Settings.GameDuration,
-		FriendlyFire: req.Settings.FriendlyFire,
-		MaxPlayers:   req.Settings.MaxPlayers,
+		RespawnDelay:    req.Settings.RespawnDelay,
+		GameDuration:    req.Settings.GameDuration,
+		FriendlyFire:    req.Settings.FriendlyFire,
+		MaxPlayers:      req.Settings.MaxPlayers,
+		ScorePerKill:    req.Settings.ScorePerKill,
+		KillsPerUpgrade: req.Settings.KillsPerUpgrade,
 	}
 
 	game, err := h.gameUC.UpdateSettings(r.Context(), gameID, settings)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, domain.ErrNotFound) {
-			status = http.StatusNotFound
-		} else if errors.Is(err, domain.ErrInvalidGameState) {
-			status = http.StatusConflict
-		}
-		writeError(w, status, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, toGameResponse(*game))
@@ -269,17 +255,17 @@ func (h *GameHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	var req AddTeamRequest
 	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
 		return
 	}
 	if req.Name == "" || req.Color == "" {
-		writeError(w, http.StatusBadRequest, "name and color required")
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name and color required")
 		return
 	}
 
 	team, err := h.gameUC.AddTeam(r.Context(), gameID, req.Name, req.Color)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, toTeamResponse(*team))
@@ -300,7 +286,7 @@ func (h *GameHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	teams, err := h.gameUC.ListTeams(r.Context(), gameID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(teams, toTeamResponse))
@@ -315,12 +301,14 @@ func (h *GameHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 //	@Param		teamId	path	string	true	"Team ID"
 //	@Success	204
 //	@Failure	401	{object}	ErrorResponse
+//	@Failure	409	{object}	ErrorResponse
 //	@Failure	500	{object}	ErrorResponse
 //	@Router		/games/{id}/teams/{teamId} [delete]
 func (h *GameHandler) RemoveTeam(w http.ResponseWriter, r *http.Request) {
+	gameID := r.PathValue("id")
 	teamID := r.PathValue("teamId")
-	if err := h.gameUC.RemoveTeam(r.Context(), teamID); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	if err := h.gameUC.RemoveTeam(r.Context(), gameID, teamID); err != nil {
+		handleDomainError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -347,25 +335,17 @@ func (h *GameHandler) AddPlayer(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	var req AddPlayerRequest
 	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
 		return
 	}
 	if req.DeviceID == "" || req.Nickname == "" {
-		writeError(w, http.StatusBadRequest, "device_id and nickname required")
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "device_id and nickname required")
 		return
 	}
 
 	player, err := h.gameUC.AddPlayer(r.Context(), gameID, req.DeviceID, req.Nickname, req.TeamID)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, domain.ErrGameFull) {
-			status = http.StatusConflict
-		} else if errors.Is(err, domain.ErrDeviceInGame) {
-			status = http.StatusConflict
-		} else if errors.Is(err, domain.ErrNotFound) {
-			status = http.StatusNotFound
-		}
-		writeError(w, status, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, toPlayerResponse(*player))
@@ -386,7 +366,7 @@ func (h *GameHandler) ListPlayers(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	players, err := h.gameUC.ListPlayers(r.Context(), gameID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(players, toPlayerResponse))
@@ -401,12 +381,14 @@ func (h *GameHandler) ListPlayers(w http.ResponseWriter, r *http.Request) {
 //	@Param		playerId	path	string	true	"Player ID"
 //	@Success	204
 //	@Failure	401	{object}	ErrorResponse
+//	@Failure	409	{object}	ErrorResponse
 //	@Failure	500	{object}	ErrorResponse
 //	@Router		/games/{id}/players/{playerId} [delete]
 func (h *GameHandler) RemovePlayer(w http.ResponseWriter, r *http.Request) {
+	gameID := r.PathValue("id")
 	playerID := r.PathValue("playerId")
-	if err := h.gameUC.RemovePlayer(r.Context(), playerID); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	if err := h.gameUC.RemovePlayer(r.Context(), gameID, playerID); err != nil {
+		handleDomainError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -432,17 +414,11 @@ func (h *GameHandler) UpdatePlayerTeam(w http.ResponseWriter, r *http.Request) {
 	playerID := r.PathValue("playerId")
 	var req UpdatePlayerTeamRequest
 	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
 		return
 	}
 	if err := h.gameUC.UpdatePlayerTeam(r.Context(), playerID, req.TeamID); err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, domain.ErrNotFound) {
-			status = http.StatusNotFound
-		} else if errors.Is(err, domain.ErrInvalidGameState) {
-			status = http.StatusConflict
-		}
-		writeError(w, status, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -465,7 +441,7 @@ func (h *GameHandler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	players, err := h.gameUC.GetLeaderboard(r.Context(), gameID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(players, toPlayerResponse))
@@ -486,7 +462,7 @@ func (h *GameHandler) Events(w http.ResponseWriter, r *http.Request) {
 	gameID := r.PathValue("id")
 	events, err := h.gameUC.ListEvents(r.Context(), gameID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		handleDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, mapSlice(events, toEventResponse))
