@@ -18,8 +18,9 @@ lt::IRReceiver irRx(PIN_IR_RX_1, PIN_IR_RX_2);
 
 lt::CanBus can;
 lt::MqttClient mqtt;
-int  playerId = 0;
-bool isDead   = false;
+int  playerId    = 0;
+bool isDead      = false;
+unsigned long flashUntilMs = 0;  // clears display to BLACK after this time
 
 uint32_t getPlayerId() {
     prefs.begin("lasertag", true);
@@ -67,10 +68,14 @@ void setup() {
     irTx.begin();
     irTx.setPlayerId(playerId);
     irTx.onShoot([]() {
+        irRx.lockout(50);
         M5.Display.fillScreen(RED);
+        flashUntilMs = millis() + 200;
+        mqtt.publishShoot();
     });
     irTx.onCooldown([]() {
         M5.Display.fillScreen(GREEN);
+        flashUntilMs = millis() + 200;
     });
     Serial.println("IR TX ready (Port A)");
 
@@ -126,6 +131,7 @@ void setup() {
     });
     mqtt.onGameStart([]() {
         isDead = false;
+        irRx.setTeamId(mqtt.teamId());
         M5.Display.fillScreen(CYAN);
         M5.Display.setTextColor(BLACK);
         M5.Display.setTextSize(2);
@@ -133,6 +139,29 @@ void setup() {
         M5.Display.println("GAME START");
         delay(1000);
         M5.Display.fillScreen(BLACK);
+    });
+    mqtt.onRejoin([](bool isAlive, uint8_t weaponLevel) {
+        isDead = !isAlive;
+        irRx.setTeamId(mqtt.teamId());
+        M5.Display.fillScreen(BLACK);
+        M5.Display.setTextColor(WHITE);
+        M5.Display.setTextSize(2);
+        M5.Display.setCursor(10, 20);
+        if (isAlive) {
+            M5.Display.printf("REJOINED\nLvl: %d", weaponLevel);
+        } else {
+            M5.Display.printf("REJOINED\nDEAD\nLvl: %d", weaponLevel);
+        }
+        delay(2000);
+        if (!isAlive) {
+            M5.Display.fillScreen(M5.Display.color565(80, 0, 0));
+            M5.Display.setTextColor(WHITE);
+            M5.Display.setTextSize(2);
+            M5.Display.setCursor(10, 20);
+            M5.Display.println("DEAD");
+        } else {
+            M5.Display.fillScreen(BLACK);
+        }
     });
     mqtt.onGameEnd([]() {
         M5.Display.fillScreen(YELLOW);
@@ -169,6 +198,11 @@ void setup() {
 
 void loop() {
     M5.update();
+
+    if (flashUntilMs && millis() >= flashUntilMs && !isDead) {
+        flashUntilMs = 0;
+        M5.Display.fillScreen(BLACK);
+    }
 
     irTx.loop();
     int code = irRx.loop();

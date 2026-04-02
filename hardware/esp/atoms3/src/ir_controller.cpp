@@ -15,6 +15,14 @@ void IRController::setPlayerId(uint32_t id) {
     playerId_ = id;
 }
 
+void IRController::setTeamId(int team) {
+    teamId_ = team;
+}
+
+void IRController::setGameActive(bool active) {
+    gameActive_ = active;
+}
+
 void IRController::onShoot(std::function<void()> cb) {
     shootCallback_ = cb;
 }
@@ -24,7 +32,7 @@ void IRController::onCooldown(std::function<void()> cb) {
 }
 
 void IRController::loop() {
-    if (!buttonReader_) return;
+    if (!buttonReader_ || !gameActive_) return;
 
     bool pressed = buttonReader_();
 
@@ -44,21 +52,23 @@ void IRController::loop() {
             return;
         }
         lastShootMs_ = now;
-        send(playerId_);
+        lockoutUntilMs_ = now + 50;
+        uint32_t code = ((uint32_t)(teamId_ & 0xF) << 4) | (playerId_ & 0xF);
+        send(code);
         if (shootCallback_) shootCallback_();
-        Serial.print("[IR TX] Fired code: 0x");
-        Serial.println(playerId_, HEX);
+        Serial.printf("[IR TX] Fired team=%d player=%d code=0x%X\n", teamId_, playerId_, code);
     }
 }
 
 int IRController::receive() {
+    uint32_t ownCode = ((uint32_t)(teamId_ & 0xF) << 4) | (playerId_ & 0xF);
+    bool locked = millis() < lockoutUntilMs_;
     if (irrecv_.decode(&results_)) {
-        int code = results_.value;
+        uint32_t code = results_.value;
         irrecv_.resume();
-        if ((uint32_t)code != playerId_) {
-            Serial.print("[IR RX] Hit from: 0x");
-            Serial.println(code, HEX);
-            return code;
+        if (!locked && code != 0xFFFFFFFF && code != ownCode) {
+            Serial.printf("[IR RX] Hit from: team=%d player=%d\n", (code >> 4) & 0xF, code & 0xF);
+            return (int)code;
         }
     }
     return -1;

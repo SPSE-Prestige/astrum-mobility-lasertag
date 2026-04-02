@@ -16,6 +16,14 @@ void IRSender::setPlayerId(uint32_t id) {
     playerId_ = id;
 }
 
+void IRSender::setTeamId(int team) {
+    teamId_ = team;
+}
+
+void IRSender::setGameActive(bool active) {
+    gameActive_ = active;
+}
+
 void IRSender::setCooldown(unsigned long ms) {
     cooldownMs_ = ms;
     Serial.printf("[IR TX] Cooldown set to %lums\n", ms);
@@ -38,6 +46,8 @@ void IRSender::onCooldown(std::function<void()> cb) {
 }
 
 void IRSender::loop() {
+    if (!gameActive_) return;
+
     bool pressed = false;
 
     if (buttonReader_) {
@@ -60,10 +70,10 @@ void IRSender::loop() {
             return;
         }
         lastShootMs_ = now;
-        send(playerId_);
+        uint32_t code = ((uint32_t)(teamId_ & 0xF) << 4) | (playerId_ & 0xF);
+        send(code);
         if (shootCallback_) shootCallback_();
-        Serial.print("[IR TX] Fired code: 0x");
-        Serial.println(playerId_, HEX);
+        Serial.printf("[IR TX] Fired team=%d player=%d code=0x%X\n", teamId_, playerId_, code);
     }
 }
 
@@ -87,23 +97,32 @@ void IRReceiver::setPlayerId(uint32_t id) {
     playerId_ = id;
 }
 
+void IRReceiver::setTeamId(int team) {
+    teamId_ = team;
+}
+
+void IRReceiver::lockout(unsigned long ms) {
+    lockoutUntilMs_ = millis() + ms;
+}
+
 int IRReceiver::loop() {
+    uint32_t ownCode = ((uint32_t)(teamId_ & 0xF) << 4) | (playerId_ & 0xF);
+    bool locked = millis() < lockoutUntilMs_;
+
     if (irrecv1_.decode(&results_)) {
-        int code = results_.value;
+        uint32_t code = results_.value;
         irrecv1_.resume();
-        if ((uint32_t)code != playerId_) {
-            Serial.print("IR RX1 hit: 0x");
-            Serial.println(code, HEX);
-            return code;
+        if (!locked && code != 0xFFFFFFFF && code != ownCode) {
+            Serial.printf("IR RX1 hit: team=%d player=%d\n", (code >> 4) & 0xF, code & 0xF);
+            return (int)code;
         }
     }
     if (irrecv2_.decode(&results_)) {
-        int code = results_.value;
+        uint32_t code = results_.value;
         irrecv2_.resume();
-        if ((uint32_t)code != playerId_) {
-            Serial.print("IR RX2 hit: 0x");
-            Serial.println(code, HEX);
-            return code;
+        if (!locked && code != 0xFFFFFFFF && code != ownCode) {
+            Serial.printf("IR RX2 hit: team=%d player=%d\n", (code >> 4) & 0xF, code & 0xF);
+            return (int)code;
         }
     }
     return -1;

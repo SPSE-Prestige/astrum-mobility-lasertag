@@ -20,6 +20,8 @@ public:
     int  receive();           // returns attacker player ID, or -1 if none
     void send(uint32_t code);
     void setPlayerId(uint32_t id);
+    void setTeamId(int team);
+    void setGameActive(bool active);
     void onShoot(std::function<void()> cb);
     void onCooldown(std::function<void()> cb);
 
@@ -32,7 +34,10 @@ private:
     std::function<void()> shootCallback_;
     std::function<void()> cooldownCallback_;
     uint32_t playerId_ = 0;
+    int teamId_ = 0;
+    bool gameActive_ = false;
     unsigned long lastShootMs_ = -2000UL;
+    unsigned long lockoutUntilMs_ = 0;
     bool wasPressed_ = false;
 };
 

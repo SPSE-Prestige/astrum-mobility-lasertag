@@ -7,6 +7,11 @@
 
 namespace lt {
 
+enum GameType {
+    GAME_DEATHMATCH      = 0,
+    GAME_TEAM_DEATHMATCH = 1,
+};
+
 using MqttHandler = std::function<void(const String&, const String&)>;
 
 class MqttClient {
@@ -15,6 +20,7 @@ public:
 
     void begin(const char* host, int port, int playerId, CanBus can);
     void loop(int code);
+    void publishShoot();
     void publish(const char* topic, const char* payload);
     void onMessage(MqttHandler cb);
     void onReconnecting(std::function<void()> cb);
@@ -23,8 +29,10 @@ public:
     void onRespawn(std::function<void()> cb);
     void onGameStart(std::function<void()> cb);
     void onGameEnd(std::function<void()> cb);
+    void onRejoin(std::function<void(bool isAlive, uint8_t weaponLevel)> cb);
 
     GameState& gameState() { return gameState_; }
+    int teamId() const { return teamId_; }
 
 private:
     void messageReceived(char* topic, byte* payload, unsigned int len);
@@ -38,11 +46,15 @@ private:
     std::function<void()> respawnCallback_;
     std::function<void()> gameStartCallback_;
     std::function<void()> gameEndCallback_;
+    std::function<void(bool, uint8_t)> rejoinCallback_;
     GameState gameState_;
 
     int playerId_ = 0;
     String gameId_;
     bool registered_ = false;
+    int teamId_ = -1;
+    bool isFriendlyFire_ = false;
+    GameType gameType_ = GAME_DEATHMATCH;
     CanBus can_;
 
     unsigned long lastHeartbeat_ = 0;

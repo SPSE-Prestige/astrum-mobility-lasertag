@@ -27,6 +27,8 @@ public:
 
     uint8_t kills() const { return kills_; }
     uint8_t level() const { return level_; }
+    void setKills(uint8_t v) { kills_ = v; }
+    void setLevel(uint8_t v) { level_ = v; }
 
     void onKill(std::function<void(uint8_t kills, uint8_t level)> cb) {
         killCallback_ = cb;

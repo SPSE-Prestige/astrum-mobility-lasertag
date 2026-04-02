@@ -19,8 +19,10 @@ public:
     void loop();
     void send(uint32_t code);
     void setPlayerId(uint32_t id);
-    void setCooldown(unsigned long ms);   // set reload time in ms
-    void enableSecondTx(int txPin);       // unlock second emitter (level 6)
+    void setTeamId(int team);
+    void setGameActive(bool active);
+    void setCooldown(unsigned long ms);
+    void enableSecondTx(int txPin);
     void onShoot(std::function<void()> cb);
     void onCooldown(std::function<void()> cb);
 
@@ -31,6 +33,8 @@ private:
     std::function<void()> shootCallback_;
     std::function<void()> cooldownCallback_;
     uint32_t playerId_ = 0;
+    int teamId_ = 0;
+    bool gameActive_ = false;
     unsigned long cooldownMs_ = 2000;
     unsigned long lastShootMs_ = -2000UL;
     bool wasPressed_ = false;
@@ -43,15 +47,19 @@ public:
     IRReceiver(int rx1Pin, int rx2Pin);
 
     void begin();
-    int loop();  // returns attacker player ID, or -1 if no signal
+    int loop();              // returns raw IR code, or -1 if no signal
+    void lockout(unsigned long ms); // ignore hits for ms milliseconds (post-shot echo prevention)
 
-    void setPlayerId(uint32_t id);  // to ignore own codes
+    void setPlayerId(uint32_t id);
+    void setTeamId(int team);
 
 private:
     IRrecv irrecv1_;
     IRrecv irrecv2_;
     decode_results results_;
     uint32_t playerId_ = 0;
+    int teamId_ = 0;
+    unsigned long lockoutUntilMs_ = 0;
 };
 
 } // namespace lt

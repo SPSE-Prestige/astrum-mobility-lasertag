@@ -18,8 +18,9 @@ lt::IRController ir(PIN_IR_TX, PIN_IR_RX, []() {
 lt::CanBus can;
 lt::MqttClient mqtt;
 
-int  playerId = 0;
-bool isDead   = false;
+int  playerId    = 0;
+bool isDead      = false;
+unsigned long flashUntilMs = 0;
 
 uint32_t getPlayerId() {
     prefs.begin("lasertag", true);
@@ -70,9 +71,12 @@ void setup() {
     ir.setPlayerId(playerId);
     ir.onShoot([]() {
         M5.Display.fillScreen(RED);
+        flashUntilMs = millis() + 200;
+        mqtt.publishShoot();
     });
     ir.onCooldown([]() {
         M5.Display.fillScreen(GREEN);
+        flashUntilMs = millis() + 200;
     });
     Serial.println("IR ready (Port A)");
 
@@ -126,6 +130,8 @@ void setup() {
     });
     mqtt.onGameStart([]() {
         isDead = false;
+        ir.setTeamId(mqtt.teamId());
+        ir.setGameActive(true);
         M5.Display.fillScreen(CYAN);
         M5.Display.setTextColor(BLACK);
         M5.Display.setTextSize(2);
@@ -134,7 +140,32 @@ void setup() {
         delay(1000);
         M5.Display.fillScreen(BLACK);
     });
+    mqtt.onRejoin([](bool isAlive, uint8_t weaponLevel) {
+        isDead = !isAlive;
+        ir.setTeamId(mqtt.teamId());
+        ir.setGameActive(isAlive);
+        M5.Display.fillScreen(BLACK);
+        M5.Display.setTextColor(WHITE);
+        M5.Display.setTextSize(2);
+        M5.Display.setCursor(10, 20);
+        if (isAlive) {
+            M5.Display.printf("REJOINED\nLvl: %d", weaponLevel);
+        } else {
+            M5.Display.printf("REJOINED\nDEAD\nLvl: %d", weaponLevel);
+        }
+        delay(2000);
+        if (!isAlive) {
+            M5.Display.fillScreen(M5.Display.color565(80, 0, 0));
+            M5.Display.setTextColor(WHITE);
+            M5.Display.setTextSize(2);
+            M5.Display.setCursor(10, 20);
+            M5.Display.println("DEAD");
+        } else {
+            M5.Display.fillScreen(BLACK);
+        }
+    });
     mqtt.onGameEnd([]() {
+        ir.setGameActive(false);
         M5.Display.fillScreen(YELLOW);
         M5.Display.setTextColor(BLACK);
         M5.Display.setTextSize(2);
@@ -145,6 +176,7 @@ void setup() {
     });
     mqtt.onDie([]() {
         isDead = true;
+        ir.setGameActive(false);
         Serial.println("[GAME] Player died");
         // Motors off handled by MqttClient via CAN
         M5.Display.fillScreen(M5.Display.color565(80, 0, 0));
@@ -155,6 +187,7 @@ void setup() {
     });
     mqtt.onRespawn([]() {
         isDead = false;
+        ir.setGameActive(true);
         Serial.println("[GAME] Player respawned");
         // Motors on handled by MqttClient via CAN
         M5.Display.fillScreen(BLUE);
@@ -169,6 +202,11 @@ void setup() {
 
 void loop() {
     M5.update();
+
+    if (flashUntilMs && millis() >= flashUntilMs && !isDead) {
+        flashUntilMs = 0;
+        M5.Display.fillScreen(BLACK);
+    }
 
     ir.loop();
     int code = ir.receive();
