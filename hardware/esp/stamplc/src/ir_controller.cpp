@@ -46,6 +46,8 @@ void IRSender::onCooldown(std::function<void()> cb) {
 }
 
 void IRSender::loop() {
+    
+#if DEBUG
     if (!gameActive_) return;
 
     bool pressed = false;
@@ -54,13 +56,19 @@ void IRSender::loop() {
         pressed = buttonReader_();
     }
 
-#if DEBUG
+    bool pressed = buttonReader_();
+
     if (pressed && !wasPressed_) {
         unsigned long elapsed = millis() - lastShootMs_;
         Serial.print("[IR TX] btn=1  cooldown_remaining=");
         Serial.println(elapsed < cooldownMs_ ? cooldownMs_ - elapsed : 0);
     }
 #endif
+    bool pressed = false;
+
+    if (buttonReader_) {
+        pressed = buttonReader_();
+    }
     wasPressed_ = pressed;
 
     if (pressed) {

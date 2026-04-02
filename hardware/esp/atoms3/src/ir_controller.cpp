@@ -32,17 +32,21 @@ void IRController::onCooldown(std::function<void()> cb) {
 }
 
 void IRController::loop() {
-    if (!buttonReader_ || !gameActive_) return;
+
+#if DEBUG
+    if ((!buttonReader_ || !gameActive_)) return;
 
     bool pressed = buttonReader_();
 
-#if DEBUG
+
     if (pressed && !wasPressed_) {
         unsigned long elapsed = millis() - lastShootMs_;
         Serial.print("[IR TX] btn=1  cooldown_remaining=");
         Serial.println(elapsed < 2000 ? 2000 - elapsed : 0);
     }
 #endif
+    bool pressed = buttonReader_();
+
     wasPressed_ = pressed;
 
     if (pressed) {
