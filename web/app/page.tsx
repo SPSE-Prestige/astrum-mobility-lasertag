@@ -18,6 +18,8 @@ const LANGUAGE_STORAGE_KEY = "race-control-language";
 const BG_GRADIENT = "min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(255,10,10,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,0,0,0.12),transparent_30%),#020303] p-4 md:p-8";
 
 export default function Home() {
+  const [isHydrated, setIsHydrated] = useState(false);
+  
   const {
     config,
     state,
@@ -49,6 +51,10 @@ export default function Home() {
   });
 
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.lang = language;
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   }, [language]);
@@ -62,6 +68,10 @@ export default function Home() {
   }, [error, clearError]);
 
   // ── Login screen ──
+  if (!isHydrated) {
+    return <div className={BG_GRADIENT} />;
+  }
+  
   if (!auth.isAuthenticated) {
     return (
       <div className={BG_GRADIENT}>
